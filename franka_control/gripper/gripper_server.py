@@ -150,7 +150,7 @@ class GripperServer:
         self._cmd_socket = self._ctx.socket(zmq.ROUTER)
         self._cmd_socket.bind(f"tcp://*:{self.cmd_port}")
         self._cmd_socket.setsockopt(zmq.RCVTIMEO, 200)
-        logger.info("ZMQ ROUTER bound on port %d", self.cmd_port)
+        logger.info("Gripper server listening on port %d", self.cmd_port)
 
         # State polling thread
         self._running = True
@@ -161,9 +161,6 @@ class GripperServer:
 
     def run(self) -> None:
         """Main loop: receive and handle commands until shutdown."""
-        logger.info("Gripper server running (state poll: %.0f Hz).",
-                     self.state_poll_hz)
-
         while self._running:
             try:
                 # ROUTER recv: [identity, delimiter, data]
