@@ -339,7 +339,7 @@ class GripperServer:
     def _poll_state_once(self) -> None:
         """Read gripper state once and update cache."""
         try:
-            s = self._gripper.readOnce()
+            s = self._gripper.read_once()
             with self._state_lock:
                 self._cached_state.update(
                     width=float(s.width),
