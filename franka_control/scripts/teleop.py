@@ -73,13 +73,14 @@ def main():
         gripper_mode="binary" if use_gripper else None,
     )
 
+    step_count = 0
+
     try:
         logger.info("Connecting to robot...")
         obs, _ = env.reset()
         logger.info("Ready. Use SpaceMouse to control. Ctrl+C to stop.")
 
         dt = 1.0 / args.hz
-        step_count = 0
 
         while running:
             t_start = time.time()

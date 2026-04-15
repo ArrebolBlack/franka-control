@@ -15,7 +15,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import glob
 import logging
+import os
 import signal
 import threading
 import time
@@ -253,9 +255,27 @@ class RobotServer:
             if FrankaRemoteController is None:
                 raise RuntimeError("aiofranka is not installed")
 
+            # Clean up stale IPC socket files from previous runs
+            socket_pattern = (
+                f"/tmp/aiofranka_{self._fci_ip.replace('.', '_')}*"
+            )
+            for f in glob.glob(socket_pattern):
+                try:
+                    os.remove(f)
+                    logger.info("Removed stale IPC socket: %s", f)
+                except OSError:
+                    pass
+
             ctrl = FrankaRemoteController(self._fci_ip, home=False)
             ctrl.start()
             ctrl.switch(controller_type)
+
+            # Verify subprocess is still alive after switch
+            if not ctrl.running:
+                raise RuntimeError(
+                    f"Controller died after switch to '{controller_type}'"
+                )
+
             return ctrl
 
         return self._submit_job("connect", _do_connect)
@@ -268,6 +288,17 @@ class RobotServer:
             except Exception:
                 pass
             self._controller = None
+
+        # Clean up IPC socket files
+        socket_pattern = (
+            f"/tmp/aiofranka_{self._fci_ip.replace('.', '_')}*"
+        )
+        for f in glob.glob(socket_pattern):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
         return {"success": True}
 
     def _cmd_switch(self, params: dict) -> dict:
