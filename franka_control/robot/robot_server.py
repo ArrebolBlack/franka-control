@@ -8,6 +8,12 @@ Three threads:
   - Worker thread: executes blocking aiofranka calls (connect/move/start)
   - State thread:  polls controller.state at configurable Hz, caches result
 
+Thread safety:
+  All access to self._controller is serialized via self._controller_lock.
+  The state poll thread uses non-blocking acquire and skips when the lock
+  is held or the worker is BUSY. A _controller_ready flag gates the poll
+  thread until the connect worker has fully completed.
+
 Usage:
     python -m franka_control.robot --fci-ip 192.168.0.2
 """
@@ -23,7 +29,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
 import msgpack
 import numpy as np
@@ -117,6 +123,8 @@ class RobotServer:
 
         # aiofranka controller (created on 'connect' command)
         self._controller: Optional[FrankaRemoteController] = None
+        self._controller_lock = threading.Lock()
+        self._controller_ready = False
 
         # Cached state
         self._cached_state = CachedRobotState()
@@ -177,16 +185,18 @@ class RobotServer:
     def _cleanup(self) -> None:
         """Clean up all resources."""
         self._running = False
+        self._controller_ready = False
 
         if self._state_thread and self._state_thread.is_alive():
             self._state_thread.join(timeout=2.0)
 
         if self._controller is not None:
-            try:
-                self._controller.stop()
-            except Exception:
-                pass
-            self._controller = None
+            with self._controller_lock:
+                try:
+                    self._controller.stop()
+                except Exception:
+                    pass
+                self._controller = None
 
         for sock in (self._cmd_socket,):
             if sock is not None:
@@ -270,12 +280,6 @@ class RobotServer:
             ctrl.start()
             ctrl.switch(controller_type)
 
-            # Wait for subprocess to finish async restart after switch.
-            # Without this delay, the state polling thread will read
-            # ctrl.state via IPC while the subprocess is mid-restart,
-            # causing it to crash.
-            time.sleep(1.0)
-
             if not ctrl.running:
                 raise RuntimeError(
                     f"Controller died after switch to '{controller_type}'"
@@ -287,12 +291,15 @@ class RobotServer:
 
     def _cmd_disconnect(self, params: dict) -> dict:
         """Stop controller and clean up."""
-        if self._controller is not None:
-            try:
-                self._controller.stop()
-            except Exception:
-                pass
-            self._controller = None
+        self._controller_ready = False
+
+        with self._controller_lock:
+            if self._controller is not None:
+                try:
+                    self._controller.stop()
+                except Exception:
+                    pass
+                self._controller = None
 
         # Clean up IPC socket files
         socket_pattern = (
@@ -308,19 +315,19 @@ class RobotServer:
 
     def _cmd_switch(self, params: dict) -> dict:
         """Switch controller type (pid/osc/impedance/torque)."""
-        if self._controller is None:
-            return {"success": False, "error": "Not connected"}
         ctrl_type = params.get("type")
         if not ctrl_type:
             return {"success": False, "error": "type is required"}
-        self._controller.switch(ctrl_type)
+
+        with self._controller_lock:
+            if self._controller is None:
+                return {"success": False, "error": "Not connected"}
+            self._controller.switch(ctrl_type)
+
         return {"success": True}
 
     def _cmd_set(self, params: dict) -> dict:
         """Set a target attribute (q_desired / ee_desired / torque)."""
-        if self._controller is None:
-            return {"success": False, "error": "Not connected"}
-
         attr = params.get("attr")
         if not attr:
             return {"success": False, "error": "attr is required"}
@@ -334,14 +341,15 @@ class RobotServer:
         if shape:
             value = value.reshape(shape)
 
-        self._controller.set(attr, value)
+        with self._controller_lock:
+            if self._controller is None:
+                return {"success": False, "error": "Not connected"}
+            self._controller.set(attr, value)
+
         return {"success": True}
 
     def _cmd_move(self, params: dict) -> dict:
         """Ruckig move to target joint position. Blocking."""
-        if self._controller is None:
-            return {"success": False, "error": "Not connected"}
-
         qpos_bytes = params.get("qpos")
         if qpos_bytes is None:
             return {"success": False, "error": "qpos is required"}
@@ -349,7 +357,10 @@ class RobotServer:
         qpos = np.frombuffer(qpos_bytes, dtype=np.float64)
 
         def _do_move():
-            self._controller.move(qpos)
+            with self._controller_lock:
+                if self._controller is None:
+                    raise RuntimeError("Not connected")
+                self._controller.move(qpos)
 
         return self._submit_job("move", _do_move)
 
@@ -378,25 +389,26 @@ class RobotServer:
 
     def _cmd_start(self, params: dict) -> dict:
         """Start controller. Blocking."""
-        if self._controller is None:
-            return {"success": False, "error": "Not connected"}
 
         def _do_start():
-            self._controller.start()
+            with self._controller_lock:
+                if self._controller is None:
+                    raise RuntimeError("Not connected")
+                self._controller.start()
 
         return self._submit_job("start", _do_start)
 
     def _cmd_stop(self, params: dict) -> dict:
         """Stop controller."""
-        if self._controller is None:
-            return {"success": False, "error": "Not connected"}
-
-        # Stop may need to interrupt a blocking move
+        self._controller_ready = False
         self._stop_flag = True
-        try:
-            self._controller.stop()
-        except Exception:
-            pass
+
+        with self._controller_lock:
+            if self._controller is not None:
+                try:
+                    self._controller.stop()
+                except Exception:
+                    pass
 
         # Join worker WITHOUT holding _worker_lock,
         # so the worker can acquire it to finish writing its result.
@@ -414,9 +426,10 @@ class RobotServer:
 
     def _cmd_is_running(self, params: dict) -> dict:
         """Check if controller is running."""
-        if self._controller is None:
-            return {"success": True, "running": False}
-        return {"success": True, "running": self._controller.running}
+        with self._controller_lock:
+            if self._controller is None:
+                return {"success": True, "running": False}
+            return {"success": True, "running": self._controller.running}
 
     def _cmd_shutdown(self, params: dict) -> dict:
         self._running = False
@@ -440,21 +453,32 @@ class RobotServer:
             try:
                 result = fn()
 
-                # Special handling for connect: store the controller
+                # Special handling for connect: store the controller.
+                # Order matters: set _controller, then set IDLE,
+                # then set _controller_ready. The state poll thread
+                # checks both _controller_ready and worker_status.
                 if name == "connect" and result is not None:
-                    self._controller = result
+                    with self._controller_lock:
+                        self._controller = result
 
                 with self._worker_lock:
                     if not self._stop_flag:
                         self._worker_result = {"success": True}
                         self._worker_status = WorkerStatus.IDLE
+
+                # Only mark ready after worker is IDLE,
+                # so the state poll thread sees a stable controller.
+                if name == "connect":
+                    self._controller_ready = True
+
             except Exception as e:
                 logger.exception("Worker job '%s' failed", name)
                 with self._worker_lock:
                     if not self._stop_flag:
                         # If connect failed, ensure controller is None
                         if name == "connect":
-                            self._controller = None
+                            with self._controller_lock:
+                                self._controller = None
                         self._worker_result = {
                             "success": False,
                             "error": str(e),
@@ -470,18 +494,47 @@ class RobotServer:
     # ── State polling ────────────────────────────────────────────
 
     def _state_poll_loop(self) -> None:
-        """Background thread: poll robot state from SharedMemory."""
+        """Background thread: poll robot state from SharedMemory.
+
+        Only reads controller.state when:
+        1. _controller_ready is True
+        2. worker_status is not BUSY
+        3. _controller_lock can be acquired (non-blocking)
+
+        If any condition fails, this cycle is skipped.
+        """
         while self._running:
             t0 = time.monotonic()
 
-            if self._controller is not None:
+            if not self._controller_ready:
+                elapsed = time.monotonic() - t0
+                remaining = self._state_interval - elapsed
+                if remaining > 0:
+                    time.sleep(remaining)
+                continue
+
+            # Skip if worker is BUSY (connect/move/start in progress)
+            with self._worker_lock:
+                if self._worker_status == WorkerStatus.BUSY:
+                    elapsed = time.monotonic() - t0
+                    remaining = self._state_interval - elapsed
+                    if remaining > 0:
+                        time.sleep(remaining)
+                    continue
+
+            # Non-blocking acquire: skip this cycle if lock is held
+            acquired = self._controller_lock.acquire(timeout=0)
+            if acquired:
                 try:
-                    state = self._controller.state
-                    if state is not None:
-                        with self._state_lock:
-                            self._cached_state.update(state)
+                    if self._controller is not None:
+                        state = self._controller.state
+                        if state is not None:
+                            with self._state_lock:
+                                self._cached_state.update(state)
                 except Exception as e:
                     logger.warning("State poll failed: %s", e)
+                finally:
+                    self._controller_lock.release()
 
             elapsed = time.monotonic() - t0
             remaining = self._state_interval - elapsed
