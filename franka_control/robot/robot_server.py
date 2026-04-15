@@ -318,17 +318,26 @@ class RobotServer:
         return self._submit_job("move", _do_move)
 
     def _cmd_get_state(self, params: dict) -> dict:
-        """Return cached state (no SharedMemory access on main thread)."""
+        """Return cached state (no SharedMemory access on main thread).
+
+        Returns worker_status even when controller is None, so client can
+        poll during connect without getting a spurious 'Not connected' error.
+        """
+        with self._worker_lock:
+            worker_status = self._worker_status.value
+            result = self._worker_result
+
         if self._controller is None:
-            return {"success": False, "error": "Not connected"}
+            return {
+                "success": True,
+                "state": {"worker_status": worker_status},
+                "result": result,
+            }
 
         with self._state_lock:
             state_dict = self._cached_state.to_dict()
 
-        with self._worker_lock:
-            state_dict["worker_status"] = self._worker_status.value
-            result = self._worker_result
-
+        state_dict["worker_status"] = worker_status
         return {"success": True, "state": state_dict, "result": result}
 
     def _cmd_start(self, params: dict) -> dict:
