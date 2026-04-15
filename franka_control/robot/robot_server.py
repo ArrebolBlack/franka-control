@@ -270,7 +270,12 @@ class RobotServer:
             ctrl.start()
             ctrl.switch(controller_type)
 
-            # Verify subprocess is still alive after switch
+            # Wait for subprocess to finish async restart after switch.
+            # Without this delay, the state polling thread will read
+            # ctrl.state via IPC while the subprocess is mid-restart,
+            # causing it to crash.
+            time.sleep(1.0)
+
             if not ctrl.running:
                 raise RuntimeError(
                     f"Controller died after switch to '{controller_type}'"
