@@ -169,6 +169,11 @@ class FrankaEnv(gym.Env):
         self._current_jac = np.zeros((6, 7), dtype=np.float64)
         self._current_torque = np.zeros(7, dtype=np.float64)
 
+        # Delta mode targets — updated by _compute_robot_target(),
+        # synced to actual state after reset/move_to/set_action_mode
+        self._desired_qpos = np.zeros(7, dtype=np.float64)
+        self._desired_ee = np.eye(4, dtype=np.float64)
+
     # ── Properties ──────────────────────────────────────────────
 
     @property
@@ -209,6 +214,7 @@ class FrankaEnv(gym.Env):
                         self._gripper_max_width)
 
         self._refresh_state()
+        self._sync_desired_state()
 
     def _ensure_connected(self) -> None:
         """Connect if not already connected."""
@@ -308,6 +314,7 @@ class FrankaEnv(gym.Env):
             f"switch {self._ctrl_type}",
         )
         self._refresh_state()
+        self._sync_desired_state()
 
     def set_action_mode(self, mode: str) -> None:
         """Switch control mode at runtime.
@@ -338,6 +345,7 @@ class FrankaEnv(gym.Env):
         self.action_mode = mode
         self._robot_action_dim = 7 if mode.startswith("joint") else 6
         self._build_action_space()
+        self._sync_desired_state()
         logger.info("Action mode switched to: %s", mode)
 
     # ── Action computation (pure logic, no communication) ────────
@@ -361,7 +369,8 @@ class FrankaEnv(gym.Env):
             return action.astype(np.float64)
 
         elif self.action_mode == "joint_delta":
-            return self._current_qpos + action
+            self._desired_qpos = self._desired_qpos + action
+            return self._desired_qpos.copy()
 
         elif self.action_mode == "ee_abs":
             target = np.eye(4)
@@ -370,11 +379,10 @@ class FrankaEnv(gym.Env):
             return target
 
         elif self.action_mode == "ee_delta":
-            target = self._current_ee.copy()
-            target[:3, 3] += action[:3]
+            self._desired_ee[:3, 3] += action[:3]
             delta_rot = Rotation.from_rotvec(action[3:])
-            target[:3, :3] = delta_rot.as_matrix() @ target[:3, :3]
-            return target
+            self._desired_ee[:3, :3] = delta_rot.as_matrix() @ self._desired_ee[:3, :3]
+            return self._desired_ee.copy()
 
     def _clip_robot_target(self, target):
         """Clip target to safe limits.
@@ -457,6 +465,15 @@ class FrankaEnv(gym.Env):
         self._current_ee = state["ee"].copy()
         self._current_jac = state["jac"].copy()
         self._current_torque = state["last_torque"].copy()
+
+    def _sync_desired_state(self) -> None:
+        """Sync delta mode targets to current actual state.
+
+        Must be called after any operation that moves the robot outside
+        of step() — reset, move_to, set_action_mode, connect.
+        """
+        self._desired_qpos = self._current_qpos.copy()
+        self._desired_ee = self._current_ee.copy()
 
     def _build_observation(self) -> dict:
         """Construct observation dict from cached state.
