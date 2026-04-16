@@ -49,12 +49,12 @@ DEFAULT_DEADZONE = 0.001
 # Robot base: depends on SpaceMouse orientation on desk
 # Default assumes facing x-axis (same as serl): [-y, x, z, -roll, -pitch, -yaw]
 DEFAULT_AXIS_REMAP = [
-    ("y", -1),      # robot x = -mouse_y
-    ("x", 1),       # robot y = +mouse_x
+    ("y", 1),       # robot x = +mouse_y
+    ("x", -1),      # robot y = -mouse_x
     ("z", 1),       # robot z = +mouse_z
-    ("roll", -1),   # robot rx = -mouse_roll
-    ("pitch", -1),  # robot ry = -mouse_pitch
-    ("yaw", 1),     # robot rz = +mouse_yaw
+    ("roll", 1),    # robot rx = +mouse_roll
+    ("pitch", 1),   # robot ry = +mouse_pitch
+    ("yaw", -1),    # robot rz = -mouse_yaw
 ]
 
 

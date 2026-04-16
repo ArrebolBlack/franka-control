@@ -47,6 +47,8 @@ python -m pytest tests/test_gripper.py -v  # 单个测试文件
 python -m pytest tests/ -k "test_name" -v  # 单个测试用例
 ```
 
+测试覆盖：仅 `test_gripper.py`（22 个测试用例，覆盖序列化/分发/worker线程/ZMQ端到端）。其余模块（env、robot、teleop、camera、data、trajectory）暂无测试。
+
 ### 启动服务（控制机）
 
 ```bash
@@ -90,15 +92,16 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 
 - ZMQ ROUTER/DEALER + msgpack 序列化
 - numpy 数组序列化为 bytes + shape 元数据
-- RobotServer / GripperServer 均使用 3 线程模式：主循环（ZMQ recv）、worker 线程（阻塞操作）、状态轮询线程
-- `_controller_lock` 保护 aiofranka 访问，`_controller_ready` 门控连接完成前的状态轮询
+- GripperServer 使用 3 线程模式：主循环（ZMQ recv）、worker 线程（阻塞 pylibfranka 调用）、状态轮询线程
+- RobotServer 使用 2 线程模式：主循环（ZMQ recv）+ 控制器线程（拥有 FrankaRemoteController，连接/轮询在同一线程）；阻塞操作（move）生成临时辅助线程
+- RobotServer 通过线程亲和性保护 aiofranka 访问（仅控制器线程接触 `self._controller`）
 
 ### 模块依赖关系
 
 - `FrankaEnv` → `RobotClient` + `GripperClient`（不直接依赖 aiofranka）
 - `TrajectoryPlanner` → `WaypointStore` + 从 `FrankaEnv` 导入关节限位常量
 - Scripts → `FrankaEnv` / `TrajectoryPlanner` / `WaypointStore` / `SpaceMouseTeleop`
-- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pyrealsense2）
+- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pyrealsense2）；lerobot 无保护，导入即依赖
 
 ### FrankaEnv 核心
 
@@ -117,7 +120,7 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 - 关节 delta 限制：±0.1 rad/step
 - 夹爪最大宽度：0.08m，默认抓力 40N
 - 轨迹规划约束：aiofranka 参数的 80%（vel ~8 rad/s, acc ~4 rad/s²）
-- ZMQ 超时：5s socket, 60s connect/start, 30s move
+- ZMQ 超时：RobotClient 5s socket / 60s connect/start / 30s move；GripperClient 10s socket
 
 ## 关键设计决策
 

@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # ── Constants ────────────────────────────────────────────────────
 
 DEFAULT_CMD_PORT = 5555
-DEFAULT_STATE_POLL_HZ = 50.0
+DEFAULT_STATE_POLL_HZ = 1000.0
 DEFAULT_CONTROLLER_TYPE = "pid"
 
 
@@ -127,7 +127,7 @@ class RobotServer:
     ):
         self._fci_ip = fci_ip
         self.cmd_port = cmd_port
-        self._state_interval = 1.0 / max(1.0, min(float(state_poll_hz), 200.0))
+        self._state_interval = 1.0 / max(1.0, float(state_poll_hz))
 
         # Controller — only accessed by controller thread (+ its helpers)
         self._controller: Optional[FrankaRemoteController] = None
