@@ -550,7 +550,7 @@ class RobotServer:
         try:
             import pylibfranka
             robot = pylibfranka.Robot(self._fci_ip)
-            robot.automaticErrorRecovery()
+            robot.automatic_error_recovery()
             logger.info("Automatic error recovery succeeded")
         except Exception as e:
             logger.warning("Error recovery failed (may be OK if no error): %s", e)
