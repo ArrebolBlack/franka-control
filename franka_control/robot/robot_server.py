@@ -471,6 +471,7 @@ class RobotServer:
             raise RuntimeError("aiofranka is not installed")
 
         self._clean_ipc_sockets()
+        self._recover_errors()
 
         ctrl = FrankaRemoteController(self._fci_ip, home=False)
         try:
@@ -538,6 +539,20 @@ class RobotServer:
         return {"success": True, "running": self._controller.running}
 
     # ── Helpers ───────────────────────────────────────────────────
+
+    def _recover_errors(self) -> None:
+        """Clear Franka error state via Desk HTTP API.
+
+        Called before start() to recover from Reflex mode (e.g., after
+        a previous disconnect killed the subprocess).
+        """
+        import requests
+        url = f"https://{self._fci_ip}/desk/api/robot/error-recovery"
+        try:
+            requests.post(url, verify=False, timeout=5)
+            logger.info("Error recovery requested via Desk API")
+        except Exception as e:
+            logger.warning("Error recovery request failed: %s", e)
 
     def _poll_state(self) -> None:
         """Read controller.state and update cache. Controller thread only."""
