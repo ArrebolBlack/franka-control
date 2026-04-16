@@ -165,9 +165,11 @@ python -m franka_control.scripts.run_trajectory \
 |------|------|------|
 | `Server timeout` | 算法机连不上控制机 | 检查 IP、防火墙、端口 5555/5556 |
 | `Robot command failed: stop` | 机器人未解锁或 FCI 未启动 | Desk 网页解锁 FCI |
+| `Reflex` 模式导致 connect 失败 | disconnect 后机器人进入错误保护 | RobotServer 会自动调用 `automatic_error_recovery()`，通常无需干预 |
 | `aiofranka is not installed` | 控制机未安装 aiofranka | 控制机上 `pip install aiofranka` |
 | `Worker busy` | 上一个阻塞命令还在执行 | 等待完成，或重启 RobotServer |
 | `Already connected` | RobotServer 已有连接 | 重启 RobotServer |
+| Gripper homing 超时 | 首次 homing 较慢，pylibfranka C++ 调用持有 GIL | 客户端 RCVTIMEO 已设为 10s，重启 GripperServer 后重试 |
 
 ## Python API
 
