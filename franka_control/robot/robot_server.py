@@ -541,18 +541,19 @@ class RobotServer:
     # ── Helpers ───────────────────────────────────────────────────
 
     def _recover_errors(self) -> None:
-        """Clear Franka error state via Desk HTTP API.
+        """Clear Franka error state before start.
 
-        Called before start() to recover from Reflex mode (e.g., after
-        a previous disconnect killed the subprocess).
+        Uses pylibfranka.Robot.automaticErrorRecovery() to clear Reflex
+        mode (e.g., after a previous disconnect killed the subprocess).
+        Falls back silently if pylibfranka is unavailable or recovery fails.
         """
-        import requests
-        url = f"https://{self._fci_ip}/desk/api/robot/error-recovery"
         try:
-            requests.post(url, verify=False, timeout=5)
-            logger.info("Error recovery requested via Desk API")
+            import pylibfranka
+            robot = pylibfranka.Robot(self._fci_ip)
+            robot.automaticErrorRecovery()
+            logger.info("Automatic error recovery succeeded")
         except Exception as e:
-            logger.warning("Error recovery request failed: %s", e)
+            logger.warning("Error recovery failed (may be OK if no error): %s", e)
 
     def _poll_state(self) -> None:
         """Read controller.state and update cache. Controller thread only."""
