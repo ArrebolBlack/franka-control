@@ -69,7 +69,15 @@ pip install numpy scipy gymnasium pyyaml pyzmq msgpack
 pip install toppra
 
 # 遥操作 (需要 SpaceMouse)
-pip install pyspacemouse
+sudo apt install libhidapi-hidraw0 libhidapi-libusb0
+pip install pyspacemouse hidapi
+
+# SpaceMouse USB 权限（免 sudo 访问 HID 设备）
+sudo tee /etc/udev/rules.d/99-spacemouse.rules > /dev/null << 'RULES'
+SUBSYSTEM=="usb", ATTRS{idVendor}=="256f", MODE="0666"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", MODE="0666"
+RULES
+sudo udevadm control --reload-rules && sudo udevadm trigger
 
 # 相机
 pip install pyrealsense2
