@@ -22,7 +22,7 @@ import zmq
 logger = logging.getLogger(__name__)
 
 # Default timeout for blocking operations (seconds)
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_TIMEOUT = 30.0
 
 
 class GripperClient:
@@ -46,8 +46,8 @@ class GripperClient:
 
         self._ctx = zmq.Context()
         self._socket = self._ctx.socket(zmq.DEALER)
-        self._socket.setsockopt(zmq.RCVTIMEO, 3000)  # 3s recv timeout
-        self._socket.setsockopt(zmq.SNDTIMEO, 3000)   # 3s send timeout
+        self._socket.setsockopt(zmq.RCVTIMEO, 5000)  # 5s recv timeout
+        self._socket.setsockopt(zmq.SNDTIMEO, 5000)   # 5s send timeout
         self._socket.connect(f"tcp://{host}:{port}")
         logger.info("Connected to gripper server at %s:%d", host, port)
 
