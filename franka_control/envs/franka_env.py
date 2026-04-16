@@ -286,12 +286,10 @@ class FrankaEnv(gym.Env):
     def move_to(self, qpos: np.ndarray) -> None:
         """Blocking Ruckig move to target joint position.
 
-        stop/move/start/switch is the minimum required lifecycle for
-        aiofranka's Ruckig move: the controller must be stopped before
-        move, and restarted with the correct type afterwards.
-
-        No try/finally: if move fails, the controller stays stopped.
-        Caller should call reset() to recover. This is intentional.
+        Switches to PID mode (move updates q_desired, which PID tracks),
+        executes move, then restores the original controller type.
+        No stop/start needed — aiofranka's move() works while the
+        control loop is running.
 
         Args:
             qpos: Target joint angles [rad], shape (7,).
@@ -301,9 +299,10 @@ class FrankaEnv(gym.Env):
                 "Not connected. Call connect() or reset() first."
             )
         target = np.clip(qpos, JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH)
-        self._robot_call(self._robot.stop, "stop")
+        self._robot_call(
+            lambda: self._robot.switch("pid"), "switch pid"
+        )
         self._robot_call(lambda: self._robot.move(target), "move")
-        self._robot_call(self._robot.start, "start")
         self._robot_call(
             lambda: self._robot.switch(self._ctrl_type),
             f"switch {self._ctrl_type}",
