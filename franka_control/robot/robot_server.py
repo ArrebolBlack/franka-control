@@ -3,16 +3,15 @@
 Runs on the control machine. Wraps aiofranka.FrankaRemoteController with a
 ZMQ ROUTER socket so the algorithm machine can control the robot remotely.
 
-Three threads:
+Two threads:
   - Main thread:  ZMQ ROUTER, receives commands and sends responses
-  - Worker thread: executes blocking aiofranka calls (connect/move/start)
-  - State thread:  polls controller.state at configurable Hz, caches result
+  - Controller thread: owns FrankaRemoteController exclusively, processes
+    commands from queue, polls state during idle time
 
 Thread safety:
-  All access to self._controller is serialized via self._controller_lock.
-  The state poll thread uses non-blocking acquire and skips when the lock
-  is held or the worker is BUSY. A _controller_ready flag gates the poll
-  thread until the connect worker has fully completed.
+  Only the controller thread (and its temporary helper threads) access
+  self._controller. The main thread never touches the controller directly.
+  State cache is protected by _state_lock.
 
 Usage:
     python -m franka_control.robot --fci-ip 192.168.0.2
@@ -24,11 +23,11 @@ import argparse
 import glob
 import logging
 import os
+import queue
 import signal
 import threading
 import time
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 
 import msgpack
@@ -47,13 +46,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CMD_PORT = 5555
 DEFAULT_STATE_POLL_HZ = 50.0
-DEFAULT_CONTROLLER_TYPE = "pid"  # initial controller after connect
+DEFAULT_CONTROLLER_TYPE = "pid"
 
 
-class WorkerStatus(str, Enum):
-    IDLE = "idle"
-    BUSY = "busy"
-
+# ── Data structures ──────────────────────────────────────────────
 
 @dataclass
 class CachedRobotState:
@@ -77,7 +73,6 @@ class CachedRobotState:
             "last_torque": self.last_torque.tobytes(),
             "q_desired": self.q_desired.tobytes(),
             "timestamp": self.timestamp,
-            # Shapes for deserialization
             "shapes": {
                 "qpos": list(self.qpos.shape),
                 "qvel": list(self.qvel.shape),
@@ -101,8 +96,22 @@ class CachedRobotState:
         self.timestamp = float(state.get("timestamp", 0.0))
 
 
+@dataclass
+class _QueuedCommand:
+    """Command queued for controller thread."""
+    name: str
+    params: dict
+    event: threading.Event = field(default_factory=threading.Event)
+    result: dict | None = None
+
+
 class RobotServer:
     """ZMQ server for Franka robot control via aiofranka.
+
+    Architecture:
+      - Main thread: ZMQ recv/send only, never touches controller
+      - Controller thread: owns FrankaRemoteController exclusively,
+        processes commands from queue, polls state during idle
 
     Args:
         fci_ip: Franka robot FCI IP address (server-side config).
@@ -118,32 +127,29 @@ class RobotServer:
     ):
         self._fci_ip = fci_ip
         self.cmd_port = cmd_port
-        self.state_poll_hz = max(1.0, min(float(state_poll_hz), 200.0))
-        self._state_interval = 1.0 / self.state_poll_hz
+        self._state_interval = 1.0 / max(1.0, min(float(state_poll_hz), 200.0))
 
-        # aiofranka controller (created on 'connect' command)
+        # Controller — only accessed by controller thread (+ its helpers)
         self._controller: Optional[FrankaRemoteController] = None
-        self._controller_lock = threading.Lock()
-        self._controller_ready = False
+        self._connected = False
 
-        # Cached state
+        # Command queue — main thread writes, controller thread reads
+        self._cmd_queue: queue.Queue[_QueuedCommand] = queue.Queue()
+        self._cmd_event = threading.Event()
+
+        # Blocking op — main thread sets _busy=True, controller thread clears
+        self._busy = False
+        self._worker_result: dict | None = None
+        self._blocking_thread: Optional[threading.Thread] = None
+
+        # Cached state — controller thread writes, main thread reads
         self._cached_state = CachedRobotState()
         self._state_lock = threading.Lock()
 
-        # Worker thread state
-        self._worker_lock = threading.Lock()
-        self._worker_status = WorkerStatus.IDLE
-        self._worker_result: dict | None = None
-        self._worker_thread: threading.Thread | None = None
-        self._stop_flag = False
-
-        # ZMQ
-        self._ctx: Optional[zmq.Context] = None
-        self._cmd_socket = None
-
         # Lifecycle
         self._running = False
-        self._state_thread: Optional[threading.Thread] = None
+        self._ctx: Optional[zmq.Context] = None
+        self._cmd_socket = None
 
     # ── Lifecycle ────────────────────────────────────────────────
 
@@ -157,67 +163,54 @@ class RobotServer:
 
         logger.info("Robot server listening on port %d", self.cmd_port)
 
-        # State polling thread
-        self._state_thread = threading.Thread(
-            target=self._state_poll_loop, daemon=True,
+        # Start controller thread
+        ctrl_thread = threading.Thread(
+            target=self._controller_loop, daemon=True, name="controller",
         )
-        self._state_thread.start()
+        ctrl_thread.start()
 
-        # Main command loop
+        # Main command loop — ZMQ recv/send only
         while self._running:
             try:
                 parts = self._cmd_socket.recv_multipart()
             except zmq.Again:
                 continue
-
             if len(parts) < 3:
                 continue
 
             identity = parts[0]
-            data = parts[2]
-
-            response = self._dispatch(data)
+            response = self._dispatch(parts[2])
             packed = msgpack.packb(response, use_bin_type=True)
             self._cmd_socket.send_multipart([identity, b"", packed])
 
-        self._cleanup()
+        # Shutdown: tell controller thread to exit, then clean up
+        self._cmd_event.set()
+        ctrl_thread.join(timeout=5.0)
+        self._cleanup_zmq()
 
-    def _cleanup(self) -> None:
-        """Clean up all resources."""
-        self._running = False
-        self._controller_ready = False
-
-        if self._state_thread and self._state_thread.is_alive():
-            self._state_thread.join(timeout=2.0)
-
-        if self._controller is not None:
-            with self._controller_lock:
-                try:
-                    self._controller.stop()
-                except Exception:
-                    pass
-                self._controller = None
-
-        for sock in (self._cmd_socket,):
-            if sock is not None:
-                try:
-                    sock.close()
-                except Exception:
-                    pass
-        self._cmd_socket = None
-
+    def _cleanup_zmq(self) -> None:
+        """Close ZMQ resources."""
+        if self._cmd_socket is not None:
+            try:
+                self._cmd_socket.close()
+            except Exception:
+                pass
+            self._cmd_socket = None
         if self._ctx is not None:
             try:
                 self._ctx.term()
             except Exception:
                 pass
             self._ctx = None
-
         logger.info("Robot server stopped.")
 
-    # ── Command dispatch ─────────────────────────────────────────
+    # ── Main thread: dispatch ─────────────────────────────────────
 
     def _dispatch(self, raw: bytes) -> dict:
+        """Route a ZMQ message to the appropriate handler.
+
+        Called on main thread. Never touches self._controller.
+        """
         try:
             msg = msgpack.unpackb(raw, raw=False)
         except Exception:
@@ -226,320 +219,356 @@ class RobotServer:
         command = msg.get("command", "")
         params = msg.get("params", {})
 
-        handlers = {
-            "connect": self._cmd_connect,
-            "disconnect": self._cmd_disconnect,
-            "switch": self._cmd_switch,
-            "set": self._cmd_set,
-            "move": self._cmd_move,
-            "get_state": self._cmd_get_state,
-            "start": self._cmd_start,
-            "stop": self._cmd_stop,
-            "is_running": self._cmd_is_running,
-            "shutdown": self._cmd_shutdown,
-        }
+        # ---- Main-thread-only (no controller access) ----
+        if command == "get_state":
+            return self._handle_get_state()
+        if command == "shutdown":
+            self._running = False
+            return {"success": True}
 
-        handler = handlers.get(command)
-        if handler is None:
-            return {"success": False, "error": f"Unknown command: {command}"}
+        # ---- Interrupt commands (bypass busy check) ----
+        if command in ("stop", "disconnect"):
+            return self._enqueue(command, params)
 
-        try:
-            return handler(params)
-        except Exception as e:
-            logger.exception("Error handling '%s'", command)
-            return {"success": False, "error": str(e)}
+        # ---- Blocking commands ----
+        if command in ("connect", "move", "start"):
+            if self._busy:
+                return {"success": False, "error": "Worker busy"}
+            self._busy = True
+            self._worker_result = None
+            return self._enqueue(command, params, blocking=True)
 
-    # ── Command handlers ─────────────────────────────────────────
+        # ---- Fast commands ----
+        if command in ("switch", "set", "is_running"):
+            if self._busy:
+                return {"success": False, "error": "Worker busy"}
+            return self._enqueue(command, params)
 
-    def _cmd_connect(self, params: dict) -> dict:
-        """Create FrankaRemoteController, start(), switch(). Blocking.
+        return {"success": False, "error": f"Unknown command: {command}"}
 
-        Uses fci_ip from server config, not from client params.
-        """
-        if self._controller is not None:
-            return {"success": False, "error": "Already connected"}
+    def _handle_get_state(self) -> dict:
+        """Return cached state + worker status. Main thread only."""
+        worker_status = "busy" if self._busy else "idle"
 
-        controller_type = params.get("controller_type", DEFAULT_CONTROLLER_TYPE)
-
-        def _do_connect():
-            if FrankaRemoteController is None:
-                raise RuntimeError("aiofranka is not installed")
-
-            # Clean up stale IPC socket files from previous runs
-            socket_pattern = (
-                f"/tmp/aiofranka_{self._fci_ip.replace('.', '_')}*"
-            )
-            for f in glob.glob(socket_pattern):
-                try:
-                    os.remove(f)
-                    logger.info("Removed stale IPC socket: %s", f)
-                except OSError:
-                    pass
-
-            ctrl = FrankaRemoteController(self._fci_ip, home=False)
-            ctrl.start()
-            ctrl.switch(controller_type)
-
-            if not ctrl.running:
-                raise RuntimeError(
-                    f"Controller died after switch to '{controller_type}'"
-                )
-
-            return ctrl
-
-        return self._submit_job("connect", _do_connect)
-
-    def _cmd_disconnect(self, params: dict) -> dict:
-        """Stop controller and clean up."""
-        self._controller_ready = False
-
-        with self._controller_lock:
-            if self._controller is not None:
-                try:
-                    self._controller.stop()
-                except Exception:
-                    pass
-                self._controller = None
-
-        # Clean up IPC socket files
-        socket_pattern = (
-            f"/tmp/aiofranka_{self._fci_ip.replace('.', '_')}*"
-        )
-        for f in glob.glob(socket_pattern):
-            try:
-                os.remove(f)
-            except OSError:
-                pass
-
-        return {"success": True}
-
-    def _cmd_switch(self, params: dict) -> dict:
-        """Switch controller type (pid/osc/impedance/torque)."""
-        ctrl_type = params.get("type")
-        if not ctrl_type:
-            return {"success": False, "error": "type is required"}
-
-        with self._controller_lock:
-            if self._controller is None:
-                return {"success": False, "error": "Not connected"}
-            self._controller.switch(ctrl_type)
-
-        return {"success": True}
-
-    def _cmd_set(self, params: dict) -> dict:
-        """Set a target attribute (q_desired / ee_desired / torque)."""
-        attr = params.get("attr")
-        if not attr:
-            return {"success": False, "error": "attr is required"}
-
-        value_bytes = params.get("value")
-        shape = params.get("shape", [])
-        if value_bytes is None:
-            return {"success": False, "error": "value is required"}
-
-        value = np.frombuffer(value_bytes, dtype=np.float64)
-        if shape:
-            value = value.reshape(shape)
-
-        with self._controller_lock:
-            if self._controller is None:
-                return {"success": False, "error": "Not connected"}
-            self._controller.set(attr, value)
-
-        return {"success": True}
-
-    def _cmd_move(self, params: dict) -> dict:
-        """Ruckig move to target joint position. Blocking."""
-        qpos_bytes = params.get("qpos")
-        if qpos_bytes is None:
-            return {"success": False, "error": "qpos is required"}
-
-        qpos = np.frombuffer(qpos_bytes, dtype=np.float64)
-
-        def _do_move():
-            with self._controller_lock:
-                if self._controller is None:
-                    raise RuntimeError("Not connected")
-                self._controller.move(qpos)
-
-        return self._submit_job("move", _do_move)
-
-    def _cmd_get_state(self, params: dict) -> dict:
-        """Return cached state (no SharedMemory access on main thread).
-
-        Returns worker_status even when controller is None, so client can
-        poll during connect without getting a spurious 'Not connected' error.
-        """
-        with self._worker_lock:
-            worker_status = self._worker_status.value
-            result = self._worker_result
-
-        if self._controller is None:
+        if not self._connected:
             return {
                 "success": True,
                 "state": {"worker_status": worker_status},
-                "result": result,
+                "result": self._worker_result,
             }
 
         with self._state_lock:
             state_dict = self._cached_state.to_dict()
 
         state_dict["worker_status"] = worker_status
-        return {"success": True, "state": state_dict, "result": result}
+        return {"success": True, "state": state_dict, "result": self._worker_result}
 
-    def _cmd_start(self, params: dict) -> dict:
-        """Start controller. Blocking."""
+    def _enqueue(self, command: str, params: dict, blocking: bool = False) -> dict:
+        """Put command in queue for controller thread.
 
-        def _do_start():
-            with self._controller_lock:
-                if self._controller is None:
-                    raise RuntimeError("Not connected")
-                self._controller.start()
+        For blocking commands: returns immediately with {"accepted": True}.
+        For fast/interrupt commands: waits for controller thread to finish.
+        """
+        cmd = _QueuedCommand(command, params)
+        self._cmd_queue.put(cmd)
+        self._cmd_event.set()
 
-        return self._submit_job("start", _do_start)
+        if blocking:
+            return {"success": True, "accepted": True}
 
-    def _cmd_stop(self, params: dict) -> dict:
-        """Stop controller."""
-        self._controller_ready = False
-        self._stop_flag = True
+        # Wait for controller thread to process
+        cmd.event.wait(timeout=10.0)
+        if cmd.result is None:
+            return {"success": False, "error": "Controller thread timeout"}
+        return cmd.result
 
-        with self._controller_lock:
+    # ── Controller thread ─────────────────────────────────────────
+
+    def _controller_loop(self) -> None:
+        """Controller thread main loop. Owns self._controller exclusively.
+
+        Cycle:
+          1. Process all pending commands from queue
+          2. Check if blocking helper finished
+          3. Poll state if idle
+        """
+        while self._running:
+            self._cmd_event.wait(timeout=self._state_interval)
+            self._cmd_event.clear()
+
+            # 1. Process all pending commands
+            while True:
+                try:
+                    cmd = self._cmd_queue.get_nowait()
+                except queue.Empty:
+                    break
+                self._process_command(cmd)
+
+            # 2. Check if blocking helper finished naturally
+            if self._blocking_thread is not None:
+                if not self._blocking_thread.is_alive():
+                    self._blocking_thread.join()
+                    self._blocking_thread = None
+                    self._busy = False
+
+            # 3. Poll state when idle
+            if self._controller is not None and not self._busy:
+                self._poll_state()
+
+        # Cleanup controller on exit
+        self._destroy_controller()
+
+    def _process_command(self, cmd: _QueuedCommand) -> None:
+        """Dispatch a queued command. Called on controller thread."""
+        name = cmd.name
+
+        if name == "connect":
+            # Connect runs directly on controller thread (not helper).
+            # FrankaRemoteController's subprocess/ZMQ/SharedMemory must be
+            # created on the same thread that will use them for state polling.
+            # Connect is a one-time operation that doesn't need stop interrupt.
+            self._execute_blocking_inline(cmd)
+        elif name in ("move", "start"):
+            self._spawn_blocking(cmd)
+        elif name == "stop":
+            self._handle_stop(cmd)
+        elif name == "disconnect":
+            self._handle_disconnect(cmd)
+        else:
+            self._execute_fast(cmd)
+
+    # ── Blocking operations ─────────────────────────────────────────
+
+    def _execute_blocking_inline(self, cmd: _QueuedCommand) -> None:
+        """Execute a blocking command directly on the controller thread.
+
+        Used for connect — the FrankaRemoteController must be created on
+        the same thread that polls state, to avoid cross-thread resource issues.
+        Blocks the controller thread, but connect is one-time and doesn't
+        need stop interrupt.
+        """
+        try:
+            result = self._call_controller(cmd.name, cmd.params)
+            self._worker_result = result
+        except Exception as e:
+            logger.exception("Blocking op '%s' failed", cmd.name)
+            self._worker_result = {"success": False, "error": str(e)}
+        self._busy = False
+        cmd.result = self._worker_result
+        cmd.event.set()
+
+    def _spawn_blocking(self, cmd: _QueuedCommand) -> None:
+        """Spawn a helper thread for a blocking controller call.
+
+        The controller thread stays free to process stop/disconnect.
+        """
+        def _helper():
+            try:
+                result = self._call_controller(cmd.name, cmd.params)
+                self._worker_result = result
+            except Exception as e:
+                logger.exception("Blocking op '%s' failed", cmd.name)
+                self._worker_result = {"success": False, "error": str(e)}
+
+        self._blocking_thread = threading.Thread(
+            target=_helper, daemon=True, name=f"helper-{cmd.name}",
+        )
+        self._blocking_thread.start()
+
+    # ── Interrupt handlers ────────────────────────────────────────
+
+    def _handle_stop(self, cmd: _QueuedCommand) -> None:
+        """Stop controller and kill any blocking op. Controller thread only."""
+        # Kill helper if running
+        if self._blocking_thread is not None and self._blocking_thread.is_alive():
             if self._controller is not None:
                 try:
                     self._controller.stop()
                 except Exception:
                     pass
-
-        # Join worker WITHOUT holding _worker_lock,
-        # so the worker can acquire it to finish writing its result.
-        thread_to_join = self._worker_thread
-        if thread_to_join and thread_to_join.is_alive():
-            thread_to_join.join(timeout=2.0)
-
-        with self._worker_lock:
-            self._worker_status = WorkerStatus.IDLE
-            self._worker_result = None
-            self._worker_thread = None
-            self._stop_flag = False
-
-        return {"success": True}
-
-    def _cmd_is_running(self, params: dict) -> dict:
-        """Check if controller is running."""
-        with self._controller_lock:
-            if self._controller is None:
-                return {"success": True, "running": False}
-            return {"success": True, "running": self._controller.running}
-
-    def _cmd_shutdown(self, params: dict) -> dict:
-        self._running = False
-        return {"success": True}
-
-    # ── Worker job submission ────────────────────────────────────
-
-    def _submit_job(self, name: str, fn) -> dict:
-        """Submit a blocking job to worker thread.
-
-        For connect jobs, the worker stores the created controller.
-        Returns immediately with accepted/rejected.
-        """
-        with self._worker_lock:
-            if self._worker_status == WorkerStatus.BUSY:
-                return {"success": False, "error": "Worker busy"}
-            self._worker_status = WorkerStatus.BUSY
-            self._worker_result = None
-
-        def _run():
+            self._blocking_thread.join(timeout=5.0)
+            if self._blocking_thread.is_alive():
+                logger.error(
+                    "Helper thread did not stop in time, "
+                    "shutting down server"
+                )
+                self._running = False
+                cmd.result = {"success": False, "error": "Blocking op did not stop in time, server shutting down"}
+                cmd.event.set()
+                return
+            self._blocking_thread = None
+        # Always stop the controller itself (stops PID/OSC control loop)
+        elif self._controller is not None:
             try:
-                result = fn()
+                self._controller.stop()
+            except Exception:
+                pass
 
-                # Special handling for connect: store the controller.
-                # Order matters: set _controller, then set IDLE,
-                # then set _controller_ready. The state poll thread
-                # checks both _controller_ready and worker_status.
-                if name == "connect" and result is not None:
-                    with self._controller_lock:
-                        self._controller = result
+        self._busy = False
+        self._worker_result = None
+        cmd.result = {"success": True}
+        cmd.event.set()
 
-                with self._worker_lock:
-                    if not self._stop_flag:
-                        self._worker_result = {"success": True}
-                        self._worker_status = WorkerStatus.IDLE
-
-                # Only mark ready after worker is IDLE,
-                # so the state poll thread sees a stable controller.
-                if name == "connect":
-                    self._controller_ready = True
-
-            except Exception as e:
-                logger.exception("Worker job '%s' failed", name)
-                with self._worker_lock:
-                    if not self._stop_flag:
-                        # If connect failed, ensure controller is None
-                        if name == "connect":
-                            with self._controller_lock:
-                                self._controller = None
-                        self._worker_result = {
-                            "success": False,
-                            "error": str(e),
-                        }
-                        self._worker_status = WorkerStatus.IDLE
-
-        t = threading.Thread(target=_run, daemon=True)
-        with self._worker_lock:
-            self._worker_thread = t
-        t.start()
-        return {"success": True, "accepted": True}
-
-    # ── State polling ────────────────────────────────────────────
-
-    def _state_poll_loop(self) -> None:
-        """Background thread: poll robot state from SharedMemory.
-
-        Only reads controller.state when:
-        1. _controller_ready is True
-        2. worker_status is not BUSY
-        3. _controller_lock can be acquired (non-blocking)
-
-        If any condition fails, this cycle is skipped.
-        """
-        while self._running:
-            t0 = time.monotonic()
-
-            if not self._controller_ready:
-                elapsed = time.monotonic() - t0
-                remaining = self._state_interval - elapsed
-                if remaining > 0:
-                    time.sleep(remaining)
-                continue
-
-            # Skip if worker is BUSY (connect/move/start in progress)
-            with self._worker_lock:
-                if self._worker_status == WorkerStatus.BUSY:
-                    elapsed = time.monotonic() - t0
-                    remaining = self._state_interval - elapsed
-                    if remaining > 0:
-                        time.sleep(remaining)
-                    continue
-
-            # Non-blocking acquire: skip this cycle if lock is held
-            acquired = self._controller_lock.acquire(timeout=0)
-            if acquired:
+    def _handle_disconnect(self, cmd: _QueuedCommand) -> None:
+        """Stop, destroy controller, clean up. Controller thread only."""
+        # Interrupt any running blocking op
+        if self._blocking_thread is not None and self._blocking_thread.is_alive():
+            if self._controller is not None:
                 try:
-                    if self._controller is not None:
-                        state = self._controller.state
-                        if state is not None:
-                            with self._state_lock:
-                                self._cached_state.update(state)
-                except Exception as e:
-                    logger.warning("State poll failed: %s", e)
-                finally:
-                    self._controller_lock.release()
+                    self._controller.stop()
+                except Exception:
+                    pass
+            self._blocking_thread.join(timeout=5.0)
+            if self._blocking_thread.is_alive():
+                # Helper won't die — server is compromised, shut down
+                logger.error(
+                    "Helper thread did not stop in time during disconnect, "
+                    "shutting down server"
+                )
+                self._running = False
+                cmd.result = {"success": False, "error": "Blocking op did not stop in time, server shutting down"}
+                cmd.event.set()
+                return
+            self._blocking_thread = None
 
-            elapsed = time.monotonic() - t0
-            remaining = self._state_interval - elapsed
-            if remaining > 0:
-                time.sleep(remaining)
+        self._destroy_controller()
+        self._busy = False
+        self._worker_result = None
+        cmd.result = {"success": True}
+        cmd.event.set()
+
+    # ── Fast command execution ────────────────────────────────────
+
+    def _execute_fast(self, cmd: _QueuedCommand) -> None:
+        """Execute a non-blocking command. Controller thread only."""
+        try:
+            cmd.result = self._call_controller(cmd.name, cmd.params)
+        except Exception as e:
+            logger.exception("Fast command '%s' failed", cmd.name)
+            cmd.result = {"success": False, "error": str(e)}
+        cmd.event.set()
+
+    # ── Controller calls (all on controller thread or its helper) ─
+
+    def _call_controller(self, name: str, params: dict) -> dict:
+        """Execute a single controller operation. Never called from main thread."""
+        if name == "connect":
+            return self._do_connect(params)
+        if name == "move":
+            return self._do_move(params)
+        if name == "start":
+            return self._do_start(params)
+        if name == "switch":
+            return self._do_switch(params)
+        if name == "set":
+            return self._do_set(params)
+        if name == "is_running":
+            return self._do_is_running(params)
+        return {"success": False, "error": f"Unknown controller call: {name}"}
+
+    def _do_connect(self, params: dict) -> dict:
+        if FrankaRemoteController is None:
+            raise RuntimeError("aiofranka is not installed")
+
+        self._clean_ipc_sockets()
+
+        ctrl = FrankaRemoteController(self._fci_ip, home=False)
+        try:
+            ctrl.start()
+            controller_type = params.get("controller_type", DEFAULT_CONTROLLER_TYPE)
+            ctrl.switch(controller_type)
+
+            if not ctrl.running:
+                raise RuntimeError(
+                    f"Controller died after switch to '{controller_type}'"
+                )
+        except Exception:
+            try:
+                ctrl.stop()
+            except Exception:
+                pass
+            raise
+
+        self._controller = ctrl
+        self._connected = True
+        return {"success": True}
+
+    def _do_move(self, params: dict) -> dict:
+        if self._controller is None:
+            raise RuntimeError("Not connected")
+        qpos = np.frombuffer(params["qpos"], dtype=np.float64)
+        self._controller.move(qpos)
+        return {"success": True}
+
+    def _do_start(self, params: dict) -> dict:
+        if self._controller is None:
+            raise RuntimeError("Not connected")
+        self._controller.start()
+        return {"success": True}
+
+    def _do_switch(self, params: dict) -> dict:
+        ctrl_type = params.get("type")
+        if not ctrl_type:
+            return {"success": False, "error": "type is required"}
+        if self._controller is None:
+            return {"success": False, "error": "Not connected"}
+        self._controller.switch(ctrl_type)
+        return {"success": True}
+
+    def _do_set(self, params: dict) -> dict:
+        attr = params.get("attr")
+        if not attr:
+            return {"success": False, "error": "attr is required"}
+        value_bytes = params.get("value")
+        if value_bytes is None:
+            return {"success": False, "error": "value is required"}
+        if self._controller is None:
+            return {"success": False, "error": "Not connected"}
+
+        value = np.frombuffer(value_bytes, dtype=np.float64)
+        shape = params.get("shape", [])
+        if shape:
+            value = value.reshape(shape)
+        self._controller.set(attr, value)
+        return {"success": True}
+
+    def _do_is_running(self, params: dict) -> dict:
+        if self._controller is None:
+            return {"success": True, "running": False}
+        return {"success": True, "running": self._controller.running}
+
+    # ── Helpers ───────────────────────────────────────────────────
+
+    def _poll_state(self) -> None:
+        """Read controller.state and update cache. Controller thread only."""
+        try:
+            state = self._controller.state
+            if state is not None:
+                with self._state_lock:
+                    self._cached_state.update(state)
+        except Exception as e:
+            logger.warning("State poll failed: %s", e)
+
+    def _destroy_controller(self) -> None:
+        """Stop and release controller. Controller thread only."""
+        if self._controller is not None:
+            try:
+                self._controller.stop()
+            except Exception:
+                pass
+            self._controller = None
+        self._connected = False
+        self._clean_ipc_sockets()
+
+    def _clean_ipc_sockets(self) -> None:
+        """Remove stale aiofranka IPC socket files."""
+        pattern = f"/tmp/aiofranka_{self._fci_ip.replace('.', '_')}*"
+        for f in glob.glob(pattern):
+            try:
+                os.remove(f)
+                logger.info("Removed stale IPC socket: %s", f)
+            except OSError:
+                pass
 
 
 # ── Entry point ──────────────────────────────────────────────────

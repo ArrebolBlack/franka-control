@@ -4,7 +4,7 @@ Dual-machine architecture: algorithm machine (this code) communicates with
 control machine via TCP. Robot control via RobotClient (ZMQ → RobotServer
 → aiofranka), gripper via GripperClient (ZMQ → GripperServer → pylibfranka).
 
-Standard Gymnasium interface: reset() / step() / get_observation() / close().
+Standard Gymnasium interface: reset() / step() / close().
 
 Actions and observations use REAL PHYSICAL UNITS (no normalization).
 For RL training, add a NormalizeActionWrapper externally.
@@ -24,7 +24,6 @@ Usage:
 from __future__ import annotations
 
 import logging
-import time
 from typing import Optional
 
 import gymnasium as gym
@@ -58,8 +57,6 @@ JOINT_LIMIT_HIGH = np.array(
 JOINT_DELTA_LIMIT = np.full(7, 0.1)
 
 # ee_abs bounds: position [m] + rotation [rad]
-# Position: conservative workspace (Franka reach ~0.855m)
-# Rotation: full ±2π
 EE_ABS_LOW = np.array([-0.8, -0.8, 0.0, -2 * np.pi, -2 * np.pi, -2 * np.pi])
 EE_ABS_HIGH = np.array([0.8, 0.8, 1.2, 2 * np.pi, 2 * np.pi, 2 * np.pi])
 
@@ -67,11 +64,13 @@ EE_ABS_HIGH = np.array([0.8, 0.8, 1.2, 2 * np.pi, 2 * np.pi, 2 * np.pi])
 EE_DELTA_LIMIT = np.array([0.05, 0.05, 0.05, 0.3, 0.3, 0.3])
 
 # Gripper defaults
-GRIPPER_SLEEP = 0.6       # binary mode debounce [s]
 GRIPPER_SPEED = 0.1       # fixed speed [m/s]
 GRIPPER_FORCE = 40.0      # default grasp force [N]
 GRIPPER_MAX_WIDTH = 0.08  # max width [m]
 GRIPPER_THRESHOLD = 0.5   # binary mode threshold
+
+
+_VALID_ACTION_MODES = {"joint_abs", "joint_delta", "ee_abs", "ee_delta"}
 
 
 class FrankaEnv(gym.Env):
@@ -108,11 +107,9 @@ class FrankaEnv(gym.Env):
     ):
         super().__init__()
 
-        # Validate params
-        valid_action_modes = {"joint_abs", "joint_delta", "ee_abs", "ee_delta"}
-        if action_mode not in valid_action_modes:
+        if action_mode not in _VALID_ACTION_MODES:
             raise ValueError(
-                f"action_mode must be one of {valid_action_modes}, "
+                f"action_mode must be one of {_VALID_ACTION_MODES}, "
                 f"got '{action_mode}'"
             )
         self.action_mode = action_mode
@@ -123,20 +120,10 @@ class FrankaEnv(gym.Env):
             home_qpos if home_qpos is not None else DEFAULT_HOME_QPOS.copy()
         )
 
-        # ── Action space (physical units) ────────────────────────
+        # Action / observation dimensions
         self._robot_action_dim = 7 if action_mode.startswith("joint") else 6
-        total_dim = self._robot_action_dim + (1 if self.use_gripper else 0)
+        self._build_action_space()
 
-        robot_low, robot_high = self._get_robot_action_bounds()
-        gripper_low, gripper_high = self._get_gripper_action_bounds()
-
-        low = np.concatenate([robot_low, gripper_low])
-        high = np.concatenate([robot_high, gripper_high])
-        self.action_space = gym.spaces.Box(
-            low=low, high=high, dtype=np.float32
-        )
-
-        # ── Observation space (physical units) ───────────────────
         obs_spaces = {
             "joint_pos": gym.spaces.Box(
                 -np.inf, np.inf, shape=(7,), dtype=np.float32
@@ -163,44 +150,31 @@ class FrankaEnv(gym.Env):
             )
         self.observation_space = gym.spaces.Dict(obs_spaces)
 
-        # ── Robot connection ─────────────────────────────────────
+        # Robot connection
         self.robot_ip = robot_ip
         self._robot_port = robot_port
         self._robot: Optional[RobotClient] = None
 
-        # ── Gripper connection ───────────────────────────────────
+        # Gripper connection
         self._gripper: Optional[GripperClient] = None
         self._gripper_host = gripper_host
         self._gripper_port = gripper_port
-        self._last_gripper_time = 0.0
         self._last_gripper_command: Optional[str] = None
         self._gripper_max_width = GRIPPER_MAX_WIDTH
 
-        # ── State cache ──────────────────────────────────────────
+        # State cache — only updated via _refresh_state()
         self._current_qpos = np.zeros(7, dtype=np.float64)
+        self._current_qvel = np.zeros(7, dtype=np.float64)
         self._current_ee = np.eye(4, dtype=np.float64)
+        self._current_jac = np.zeros((6, 7), dtype=np.float64)
+        self._current_torque = np.zeros(7, dtype=np.float64)
 
-    # ── Action bounds helpers ─────────────────────────────────────
+    # ── Properties ──────────────────────────────────────────────
 
-    def _get_robot_action_bounds(self):
-        """Return (low, high) arrays for robot action dimensions."""
-        if self.action_mode == "joint_abs":
-            return JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH
-        elif self.action_mode == "joint_delta":
-            return -JOINT_DELTA_LIMIT, JOINT_DELTA_LIMIT
-        elif self.action_mode == "ee_abs":
-            return EE_ABS_LOW, EE_ABS_HIGH
-        elif self.action_mode == "ee_delta":
-            return -EE_DELTA_LIMIT, EE_DELTA_LIMIT
-
-    def _get_gripper_action_bounds(self):
-        """Return (low, high) arrays for gripper action dimension."""
-        if not self.use_gripper:
-            return np.array([]), np.array([])
-        if self.gripper_mode == "continuous":
-            return np.array([0.0]), np.array([GRIPPER_MAX_WIDTH])
-        else:  # binary
-            return np.array([0.0]), np.array([1.0])
+    @property
+    def _ctrl_type(self) -> str:
+        """Controller type for current action_mode."""
+        return "pid" if self.action_mode.startswith("joint") else "osc"
 
     # ── Lifecycle ────────────────────────────────────────────────
 
@@ -215,14 +189,10 @@ class FrankaEnv(gym.Env):
         self._robot = RobotClient(
             host=self.robot_ip, port=self._robot_port,
         )
-
-        # Determine initial controller type
-        ctrl_type = "pid" if self.action_mode.startswith("joint") else "osc"
-        if not self._robot.connect(controller_type=ctrl_type):
+        if not self._robot.connect(controller_type=self._ctrl_type):
             raise RuntimeError("Failed to connect to robot")
         logger.info("Robot connected. Mode: %s", self.action_mode)
 
-        # Gripper
         if self.use_gripper:
             logger.info("Connecting to gripper at %s:%d ...",
                         self._gripper_host, self._gripper_port)
@@ -232,12 +202,18 @@ class FrankaEnv(gym.Env):
             self._gripper.homing()
             state = self._gripper.get_state()
             if state:
-                self._gripper_max_width = state.get("max_width", GRIPPER_MAX_WIDTH)
+                self._gripper_max_width = state.get(
+                    "max_width", GRIPPER_MAX_WIDTH
+                )
             logger.info("Gripper connected. Max width: %.4f m",
                         self._gripper_max_width)
 
-        # Cache initial state
-        self._update_current_state()
+        self._refresh_state()
+
+    def _ensure_connected(self) -> None:
+        """Connect if not already connected."""
+        if self._robot is None:
+            self.connect()
 
     # ── Gym interface ────────────────────────────────────────────
 
@@ -248,29 +224,11 @@ class FrankaEnv(gym.Env):
             (observation, info)
         """
         super().reset(seed=seed)
-
-        if self._robot is None:
-            self.connect()
-
-        # Stop → move home → restart
-        self._robot_call(self._robot.stop, "stop")
-        self._robot_call(lambda: self._robot.move(self.home_qpos), "move home")
-        self._robot_call(self._robot.start, "start")
-
-        # Re-switch controller (stop/start may reset)
-        if self.action_mode.startswith("joint"):
-            self._robot_call(lambda: self._robot.switch("pid"), "switch pid")
-        else:
-            self._robot_call(lambda: self._robot.switch("osc"), "switch osc")
-
-        # Open gripper
-        if self.use_gripper and self._gripper:
-            self._gripper.open(width=self._gripper_max_width)
-            self._last_gripper_command = "open"
-            self._last_gripper_time = time.time()
-
-        self._update_current_state()
-        return self.get_observation(), {}
+        self._ensure_connected()
+        self.move_to(self.home_qpos)
+        if self.use_gripper:
+            self._reset_gripper()
+        return self._build_observation(), {}
 
     def step(self, action: np.ndarray):
         """Execute one step.
@@ -285,53 +243,25 @@ class FrankaEnv(gym.Env):
         """
         action = np.clip(action, self.action_space.low, self.action_space.high)
 
-        # Split robot and gripper actions
-        robot_action = action[: self._robot_action_dim]
-        gripper_action = action[self._robot_action_dim] if self.use_gripper else None
+        robot_action, gripper_action = self._split_action(action)
+        target = self._compute_robot_target(robot_action)
+        target = self._clip_robot_target(target)
+        self._send_robot_target(target)
 
-        # Convert action to target
-        target = self._parse_action(robot_action)
-
-        # Safety clip
-        target = self._clip_safety(target)
-
-        # Send to robot
-        self._send_target(target)
-
-        # Handle gripper
         if gripper_action is not None:
-            self._handle_gripper(gripper_action)
+            self._apply_gripper_action(gripper_action)
 
-        # Read state
-        self._update_current_state()
-        obs = self.get_observation()
-
-        return obs, 0.0, False, False, {}
+        self._refresh_state()
+        return self._build_observation(), 0.0, False, False, {}
 
     def get_observation(self) -> dict:
-        """Read current observation from RobotClient state cache."""
+        """Read current observation (refreshes state from robot)."""
         if self._robot is None:
-            raise RuntimeError("Not connected. Call connect() or reset() first.")
-
-        state = self._robot.state
-
-        obs = {
-            "joint_pos": state["qpos"].astype(np.float32),
-            "joint_vel": state["qvel"].astype(np.float32),
-            "joint_torque": state["last_torque"].astype(np.float32),
-            "ee_pos": state["ee"][:3, 3].astype(np.float32),
-            "ee_quat": Rotation.from_matrix(state["ee"][:3, :3])
-            .as_quat()
-            .astype(np.float32),
-            "ee_vel": (state["jac"] @ state["qvel"]).astype(np.float32),
-        }
-
-        if self.use_gripper and self._gripper:
-            gripper_state = self._gripper.get_state()
-            width = gripper_state["width"] if gripper_state else 0.0
-            obs["gripper_width"] = np.array([width], dtype=np.float32)
-
-        return obs
+            raise RuntimeError(
+                "Not connected. Call connect() or reset() first."
+            )
+        self._refresh_state()
+        return self._build_observation()
 
     def close(self):
         """Disconnect from robot and gripper."""
@@ -356,67 +286,72 @@ class FrankaEnv(gym.Env):
     def move_to(self, qpos: np.ndarray) -> None:
         """Blocking Ruckig move to target joint position.
 
-        Temporarily switches to PID mode, executes move, then restores
-        the previous controller type. Does NOT change self.action_mode.
+        stop/move/start/switch is the minimum required lifecycle for
+        aiofranka's Ruckig move: the controller must be stopped before
+        move, and restarted with the correct type afterwards.
+
+        No try/finally: if move fails, the controller stays stopped.
+        Caller should call reset() to recover. This is intentional.
 
         Args:
             qpos: Target joint angles [rad], shape (7,).
         """
         if self._robot is None:
-            raise RuntimeError("Not connected. Call connect() or reset() first.")
-        prev_was_joint = self.action_mode.startswith("joint")
+            raise RuntimeError(
+                "Not connected. Call connect() or reset() first."
+            )
+        target = np.clip(qpos, JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH)
         self._robot_call(self._robot.stop, "stop")
-        self._robot_call(lambda: self._robot.switch("pid"), "switch pid")
-        try:
-            target = np.clip(qpos, JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH)
-            self._robot_call(lambda: self._robot.move(target), "move")
-        finally:
-            # Always restore controller, even if move() failed
-            self._robot_call(self._robot.start, "start")
-            if not prev_was_joint:
-                self._robot_call(lambda: self._robot.switch("osc"), "switch osc")
-        self._update_current_state()
+        self._robot_call(lambda: self._robot.move(target), "move")
+        self._robot_call(self._robot.start, "start")
+        self._robot_call(
+            lambda: self._robot.switch(self._ctrl_type),
+            f"switch {self._ctrl_type}",
+        )
+        self._refresh_state()
 
     def set_action_mode(self, mode: str) -> None:
-        """Switch control mode at runtime (hot-swap).
+        """Switch control mode at runtime.
 
-        Changes action_mode, rebuilds action_space, and switches the
-        underlying controller (PID/OSC). No stop/start needed.
+        Switches the remote controller first. Only updates local state
+        (action_mode, action_space) after the remote switch succeeds.
 
         Args:
             mode: One of joint_abs, joint_delta, ee_abs, ee_delta.
         """
-        valid = {"joint_abs", "joint_delta", "ee_abs", "ee_delta"}
-        if mode not in valid:
+        if mode not in _VALID_ACTION_MODES:
             raise ValueError(
-                f"action_mode must be one of {valid}, got '{mode}'"
+                f"action_mode must be one of {_VALID_ACTION_MODES}, "
+                f"got '{mode}'"
             )
         if self._robot is None:
-            raise RuntimeError("Not connected. Call connect() or reset() first.")
+            raise RuntimeError(
+                "Not connected. Call connect() or reset() first."
+            )
 
-        # Remote switch first — if this fails, local state is untouched
-        if mode.startswith("joint"):
-            self._robot_call(lambda: self._robot.switch("pid"), "switch pid")
-        else:
-            self._robot_call(lambda: self._robot.switch("osc"), "switch osc")
-
-        # Remote succeeded — now update local state
-        self.action_mode = mode
-        self._robot_action_dim = 7 if mode.startswith("joint") else 6
-
-        robot_low, robot_high = self._get_robot_action_bounds()
-        gripper_low, gripper_high = self._get_gripper_action_bounds()
-        self.action_space = gym.spaces.Box(
-            low=np.concatenate([robot_low, gripper_low]),
-            high=np.concatenate([robot_high, gripper_high]),
-            dtype=np.float32,
+        # Remote first — if this fails, local state is untouched
+        ctrl_type = "pid" if mode.startswith("joint") else "osc"
+        self._robot_call(
+            lambda: self._robot.switch(ctrl_type), f"switch {ctrl_type}"
         )
 
+        # Remote succeeded — update local state
+        self.action_mode = mode
+        self._robot_action_dim = 7 if mode.startswith("joint") else 6
+        self._build_action_space()
         logger.info("Action mode switched to: %s", mode)
 
-    # ── Action parsing ───────────────────────────────────────────
+    # ── Action computation (pure logic, no communication) ────────
 
-    def _parse_action(self, action: np.ndarray):
+    def _split_action(self, action: np.ndarray):
+        """Split action into robot and gripper parts."""
+        robot_action = action[: self._robot_action_dim]
+        gripper_action = (
+            action[self._robot_action_dim] if self.use_gripper else None
+        )
+        return robot_action, gripper_action
+
+    def _compute_robot_target(self, action: np.ndarray):
         """Convert physical-unit action to controller target.
 
         Returns:
@@ -424,29 +359,35 @@ class FrankaEnv(gym.Env):
             np.ndarray [4x4] for ee modes (homogeneous matrix).
         """
         if self.action_mode == "joint_abs":
-            # action is already in [rad]
             return action.astype(np.float64)
 
         elif self.action_mode == "joint_delta":
-            # action is delta in [rad], add to current
             return self._current_qpos + action
 
         elif self.action_mode == "ee_abs":
-            # action = [xyz(3), rotvec(3)] → 4x4 matrix
             target = np.eye(4)
             target[:3, 3] = action[:3]
             target[:3, :3] = Rotation.from_rotvec(action[3:]).as_matrix()
             return target
 
         elif self.action_mode == "ee_delta":
-            # action = [delta_xyz(3), delta_rotvec(3)]
             target = self._current_ee.copy()
             target[:3, 3] += action[:3]
             delta_rot = Rotation.from_rotvec(action[3:])
             target[:3, :3] = delta_rot.as_matrix() @ target[:3, :3]
             return target
 
-    def _send_target(self, target) -> None:
+    def _clip_robot_target(self, target):
+        """Clip target to safe limits.
+
+        Joint modes: clip to joint limits.
+        EE modes: no clip (OSC handles safety internally).
+        """
+        if self.action_mode.startswith("joint"):
+            return np.clip(target, JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH)
+        return target
+
+    def _send_robot_target(self, target) -> None:
         """Send target to robot via RobotClient."""
         if self.action_mode.startswith("joint"):
             self._robot_call(
@@ -457,25 +398,13 @@ class FrankaEnv(gym.Env):
                 lambda: self._robot.set("ee_desired", target), "set ee_desired"
             )
 
-    # ── Safety ───────────────────────────────────────────────────
-
-    def _clip_safety(self, target):
-        """Clip target to safe limits.
-
-        Joint modes: clip to joint limits.
-        EE modes: no clip (OSC handles safety internally).
-        """
-        if self.action_mode.startswith("joint"):
-            return np.clip(target, JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH)
-        return target
-
     # ── Gripper ──────────────────────────────────────────────────
 
-    def _handle_gripper(self, action: float) -> None:
-        """Process gripper action based on gripper_mode.
+    def _apply_gripper_action(self, action: float) -> None:
+        """Execute gripper action.
 
-        continuous: action is target width [m], non-blocking move.
-        binary: action is [0, 1], threshold at 0.5, with debounce.
+        continuous: send target width every step (width can change).
+        binary: edge-triggered — only send on open↔close transitions.
         """
         if self._gripper is None:
             return
@@ -487,46 +416,116 @@ class FrankaEnv(gym.Env):
                 logger.warning("Gripper move(%.4f) failed", width)
 
         elif self.gripper_mode == "binary":
-            now = time.time()
-            if now - self._last_gripper_time < GRIPPER_SLEEP:
-                return
-
             command = "open" if action >= GRIPPER_THRESHOLD else "close"
             if command == self._last_gripper_command:
                 return
 
             if command == "open":
-                ok = self._gripper.open(width=self._gripper_max_width,
-                                        speed=GRIPPER_SPEED)
+                ok = self._gripper.open(
+                    width=self._gripper_max_width, speed=GRIPPER_SPEED
+                )
             else:
                 ok = self._gripper.grasp(
-                    width=0.0, speed=GRIPPER_SPEED,
-                    force=self._grasp_force
+                    width=0.0, speed=GRIPPER_SPEED, force=self._grasp_force
                 )
 
             if ok:
                 self._last_gripper_command = command
-                self._last_gripper_time = now
             else:
                 logger.warning("Gripper %s failed", command)
+
+    def _reset_gripper(self) -> None:
+        """Open gripper for reset. Failure is non-fatal (warning only)."""
+        if self._gripper is None:
+            return
+        ok = self._gripper.open(
+            width=self._gripper_max_width, speed=GRIPPER_SPEED
+        )
+        if ok:
+            self._last_gripper_command = "open"
+        else:
+            logger.warning("Gripper reset (open) failed")
+
+    # ── State and observation ────────────────────────────────────
+
+    def _refresh_state(self) -> None:
+        """Read robot state and update cache. No gripper read."""
+        if self._robot is None:
+            return
+        state = self._robot.state
+        self._current_qpos = state["qpos"].copy()
+        self._current_qvel = state["qvel"].copy()
+        self._current_ee = state["ee"].copy()
+        self._current_jac = state["jac"].copy()
+        self._current_torque = state["last_torque"].copy()
+
+    def _build_observation(self) -> dict:
+        """Construct observation dict from cached state.
+
+        Robot state comes from cache (updated by _refresh_state).
+        Gripper width is read live from GripperClient.
+        Does NOT do robot communication.
+        """
+        obs = {
+            "joint_pos": self._current_qpos.astype(np.float32),
+            "joint_vel": self._current_qvel.astype(np.float32),
+            "joint_torque": self._current_torque.astype(np.float32),
+            "ee_pos": self._current_ee[:3, 3].astype(np.float32),
+            "ee_quat": Rotation.from_matrix(self._current_ee[:3, :3])
+            .as_quat()
+            .astype(np.float32),
+            "ee_vel": (self._current_jac @ self._current_qvel).astype(
+                np.float32
+            ),
+        }
+
+        if self.use_gripper and self._gripper:
+            gripper_state = self._gripper.get_state()
+            width = gripper_state["width"] if gripper_state else 0.0
+            obs["gripper_width"] = np.array([width], dtype=np.float32)
+
+        return obs
+
+    # ── Action space construction ────────────────────────────────
+
+    def _build_action_space(self) -> None:
+        """Build action_space from current action_mode and gripper_mode."""
+        robot_low, robot_high = self._get_robot_action_bounds()
+        gripper_low, gripper_high = self._get_gripper_action_bounds()
+        self.action_space = gym.spaces.Box(
+            low=np.concatenate([robot_low, gripper_low]),
+            high=np.concatenate([robot_high, gripper_high]),
+            dtype=np.float32,
+        )
+
+    def _get_robot_action_bounds(self):
+        """Return (low, high) arrays for robot action dimensions."""
+        if self.action_mode == "joint_abs":
+            return JOINT_LIMIT_LOW, JOINT_LIMIT_HIGH
+        elif self.action_mode == "joint_delta":
+            return -JOINT_DELTA_LIMIT, JOINT_DELTA_LIMIT
+        elif self.action_mode == "ee_abs":
+            return EE_ABS_LOW, EE_ABS_HIGH
+        elif self.action_mode == "ee_delta":
+            return -EE_DELTA_LIMIT, EE_DELTA_LIMIT
+
+    def _get_gripper_action_bounds(self):
+        """Return (low, high) arrays for gripper action dimension."""
+        if not self.use_gripper:
+            return np.array([]), np.array([])
+        if self.gripper_mode == "continuous":
+            return np.array([0.0]), np.array([GRIPPER_MAX_WIDTH])
+        else:  # binary
+            return np.array([0.0]), np.array([1.0])
 
     # ── Internal helpers ─────────────────────────────────────────
 
     def _robot_call(self, method, label: str) -> None:
         """Call a RobotClient method, raise on failure.
 
-        RobotClient returns bool (False = failure) instead of raising,
-        unlike the local aiofranka controller. This helper restores
-        the raise-on-failure behavior so callers see consistent errors.
+        RobotClient returns bool (False = failure) instead of raising.
+        This helper restores raise-on-failure so callers see consistent errors.
         """
         ok = method()
         if not ok:
             raise RuntimeError(f"Robot command failed: {label}")
-
-    def _update_current_state(self) -> None:
-        """Cache current joint positions and EE pose from RobotClient."""
-        if self._robot is None:
-            return
-        state = self._robot.state
-        self._current_qpos = state["qpos"].copy()
-        self._current_ee = state["ee"].copy()
