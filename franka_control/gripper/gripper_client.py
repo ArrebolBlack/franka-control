@@ -46,7 +46,7 @@ class GripperClient:
 
         self._ctx = zmq.Context()
         self._socket = self._ctx.socket(zmq.DEALER)
-        self._socket.setsockopt(zmq.RCVTIMEO, 5000)  # 5s recv timeout
+        self._socket.setsockopt(zmq.RCVTIMEO, 10000)  # 10s recv timeout
         self._socket.setsockopt(zmq.SNDTIMEO, 5000)   # 5s send timeout
         self._socket.connect(f"tcp://{host}:{port}")
         logger.info("Connected to gripper server at %s:%d", host, port)
