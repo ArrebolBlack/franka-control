@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Optional
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60.0  # connect/start can take a long time
 MOVE_TIMEOUT = 30.0
+DEFAULT_STATE_STREAM_PORT = 5557
 
 
 class RobotClient:
@@ -43,10 +45,12 @@ class RobotClient:
         self,
         host: str,
         port: int = 5555,
+        state_stream_port: int = DEFAULT_STATE_STREAM_PORT,
         timeout: float = DEFAULT_TIMEOUT,
     ):
         self.host = host
         self.port = port
+        self._state_stream_port = state_stream_port
         self.timeout = timeout
 
         self._ctx = zmq.Context()
@@ -56,8 +60,22 @@ class RobotClient:
         self._socket.connect(f"tcp://{host}:{port}")
         logger.info("Connected to robot server at %s:%d", host, port)
 
+        self._pull_socket = self._ctx.socket(zmq.PULL)
+        self._pull_socket.setsockopt(zmq.RCVHWM, 2)
+        self._pull_socket.setsockopt(zmq.RCVTIMEO, 100)
+        self._pull_socket.connect(f"tcp://{host}:{state_stream_port}")
+
         # Local state cache
         self._cached_state: dict | None = None
+        self._streaming_state: dict | None = None
+        self._state_lock = threading.Lock()
+        self._stream_running = True
+        self._state_thread = threading.Thread(
+            target=self._state_receiver,
+            daemon=True,
+            name="state-receiver",
+        )
+        self._state_thread.start()
 
     # ── Low-level ────────────────────────────────────────────────
 
@@ -98,6 +116,61 @@ class RobotClient:
             time.sleep(0.05)  # 20Hz polling
         return {"success": False, "error": "Timeout waiting for robot server"}
 
+    def _decode_state(self, raw: dict) -> dict:
+        """Decode msgpack state payload into numpy arrays."""
+        shapes = raw.get("shapes", {})
+        defaults = {
+            "qpos": [7],
+            "qvel": [7],
+            "ee": [4, 4],
+            "jac": [6, 7],
+            "mm": [7, 7],
+            "last_torque": [7],
+            "q_desired": [7],
+        }
+        state = {}
+        for key, default_shape in defaults.items():
+            state[key] = np.frombuffer(raw[key], dtype=np.float64).copy().reshape(
+                shapes.get(key, default_shape)
+            )
+        state["timestamp"] = raw.get("timestamp", 0.0)
+        return state
+
+    def _state_receiver(self) -> None:
+        """Receive streamed state snapshots and keep only the latest."""
+        while self._stream_running:
+            try:
+                raw = self._pull_socket.recv()
+                while True:
+                    try:
+                        raw = self._pull_socket.recv(zmq.NOBLOCK)
+                    except zmq.Again:
+                        break
+                decoded = self._decode_state(msgpack.unpackb(raw, raw=False))
+                with self._state_lock:
+                    self._streaming_state = decoded
+            except zmq.Again:
+                continue
+            except Exception as e:
+                if self._stream_running:
+                    logger.warning("State stream decode error: %s", e)
+
+    def _rpc_get_state(self) -> dict:
+        """Fetch state synchronously via the command channel."""
+        resp = self._send_command("get_state")
+        if not resp.get("success"):
+            raise RuntimeError(f"Failed to get state: {resp.get('error')}")
+
+        state = self._decode_state(resp.get("state", {}))
+        self._cached_state = state
+        return state
+
+    def _force_refresh_state(self) -> None:
+        """Synchronously refresh the local cache after blocking ops."""
+        state = self._rpc_get_state()
+        with self._state_lock:
+            self._streaming_state = state
+
     # ── API (mirrors FrankaRemoteController) ─────────────────────
 
     def connect(
@@ -128,6 +201,7 @@ class RobotClient:
         if not result.get("success"):
             logger.error("Connect failed: %s", result.get("error"))
             return False
+        self._force_refresh_state()
         return True
 
     def start(self, timeout: float = None) -> bool:
@@ -142,7 +216,10 @@ class RobotClient:
             logger.error("Start rejected: %s", resp.get("error"))
             return False
         result = self._wait_until_idle(timeout)
-        return result.get("success", False)
+        if not result.get("success", False):
+            return False
+        self._force_refresh_state()
+        return True
 
     def stop(self) -> bool:
         """Stop the control loop.
@@ -169,12 +246,21 @@ class RobotClient:
 
         Returns True if successful.
         """
-        resp = self._send_command("set", {
-            "attr": attr,
-            "value": value.astype(np.float64).tobytes(),
-            "shape": list(value.shape),
-        })
-        return resp.get("success", False)
+        msg = {
+            "command": "set",
+            "params": {
+                "attr": attr,
+                "value": value.astype(np.float64).tobytes(),
+                "shape": list(value.shape),
+            },
+        }
+        try:
+            packed = msgpack.packb(msg, use_bin_type=True)
+            self._socket.send_multipart([b"", packed])
+            return True
+        except Exception:
+            logger.exception("Failed to stream robot set command")
+            return False
 
     def move(self, qpos: np.ndarray, timeout: float = None) -> bool:
         """Ruckig trajectory move to target joint position. Blocking.
@@ -194,7 +280,10 @@ class RobotClient:
             logger.error("Move rejected: %s", resp.get("error"))
             return False
         result = self._wait_until_idle(timeout)
-        return result.get("success", False)
+        if not result.get("success", False):
+            return False
+        self._force_refresh_state()
+        return True
 
     @property
     def state(self) -> dict:
@@ -203,34 +292,11 @@ class RobotClient:
         Returns dict with numpy arrays: qpos, qvel, ee, jac, mm,
         last_torque, q_desired, timestamp.
         """
-        resp = self._send_command("get_state")
-        if not resp.get("success"):
-            raise RuntimeError(f"Failed to get state: {resp.get('error')}")
-
-        raw = resp.get("state", {})
-        shapes = raw.get("shapes", {})
-
-        state = {
-            "qpos": np.frombuffer(raw["qpos"], dtype=np.float64).copy()
-                .reshape(shapes.get("qpos", [7])),
-            "qvel": np.frombuffer(raw["qvel"], dtype=np.float64).copy()
-                .reshape(shapes.get("qvel", [7])),
-            "ee": np.frombuffer(raw["ee"], dtype=np.float64).copy()
-                .reshape(shapes.get("ee", [4, 4])),
-            "jac": np.frombuffer(raw["jac"], dtype=np.float64).copy()
-                .reshape(shapes.get("jac", [6, 7])),
-            "mm": np.frombuffer(raw["mm"], dtype=np.float64).copy()
-                .reshape(shapes.get("mm", [7, 7])),
-            "last_torque": np.frombuffer(raw["last_torque"], dtype=np.float64).copy()
-                .reshape(shapes.get("last_torque", [7])),
-            "q_desired": np.frombuffer(raw["q_desired"], dtype=np.float64).copy()
-                .reshape(shapes.get("q_desired", [7])),
-            "timestamp": raw.get("timestamp", 0.0),
-        }
-
-        # Update local cache
-        self._cached_state = state
-        return state
+        with self._state_lock:
+            if self._streaming_state is not None:
+                self._cached_state = self._streaming_state
+                return dict(self._streaming_state)
+        return self._rpc_get_state()
 
     @property
     def running(self) -> bool:
@@ -250,6 +316,11 @@ class RobotClient:
 
     def close(self) -> None:
         """Disconnect from server and close ZMQ connection."""
+        self._stream_running = False
+        if self._state_thread.is_alive():
+            self._state_thread.join(timeout=2.0)
+        if self._pull_socket:
+            self._pull_socket.close()
         if self._socket:
             try:
                 self.disconnect()

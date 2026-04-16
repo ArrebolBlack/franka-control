@@ -161,6 +161,7 @@ class FrankaEnv(gym.Env):
         self._gripper_port = gripper_port
         self._last_gripper_command: Optional[str] = None
         self._gripper_max_width = GRIPPER_MAX_WIDTH
+        self._cached_gripper_width = 0.0
 
         # State cache — only updated via _refresh_state()
         self._current_qpos = np.zeros(7, dtype=np.float64)
@@ -210,6 +211,7 @@ class FrankaEnv(gym.Env):
                 self._gripper_max_width = state.get(
                     "max_width", GRIPPER_MAX_WIDTH
                 )
+                self._cached_gripper_width = state.get("width", 0.0)
             logger.info("Gripper connected. Max width: %.4f m",
                         self._gripper_max_width)
 
@@ -421,6 +423,8 @@ class FrankaEnv(gym.Env):
             ok = self._gripper.move(width=width, speed=GRIPPER_SPEED)
             if not ok:
                 logger.warning("Gripper move(%.4f) failed", width)
+            else:
+                self._cached_gripper_width = width
 
         elif self.gripper_mode == "binary":
             command = "open" if action >= GRIPPER_THRESHOLD else "close"
@@ -438,6 +442,9 @@ class FrankaEnv(gym.Env):
 
             if ok:
                 self._last_gripper_command = command
+                self._cached_gripper_width = (
+                    self._gripper_max_width if command == "open" else 0.0
+                )
             else:
                 logger.warning("Gripper %s failed", command)
 
@@ -450,6 +457,7 @@ class FrankaEnv(gym.Env):
         )
         if ok:
             self._last_gripper_command = "open"
+            self._cached_gripper_width = self._gripper_max_width
         else:
             logger.warning("Gripper reset (open) failed")
 
@@ -495,10 +503,10 @@ class FrankaEnv(gym.Env):
             ),
         }
 
-        if self.use_gripper and self._gripper:
-            gripper_state = self._gripper.get_state()
-            width = gripper_state["width"] if gripper_state else 0.0
-            obs["gripper_width"] = np.array([width], dtype=np.float32)
+        if self.use_gripper:
+            obs["gripper_width"] = np.array(
+                [self._cached_gripper_width], dtype=np.float32
+            )
 
         return obs
 

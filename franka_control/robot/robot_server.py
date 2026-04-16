@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 # ── Constants ────────────────────────────────────────────────────
 
 DEFAULT_CMD_PORT = 5555
+DEFAULT_STATE_STREAM_PORT = 5557
 DEFAULT_STATE_POLL_HZ = 1000.0
 DEFAULT_CONTROLLER_TYPE = "pid"
 
@@ -124,9 +125,11 @@ class RobotServer:
         fci_ip: str,
         cmd_port: int = DEFAULT_CMD_PORT,
         state_poll_hz: float = DEFAULT_STATE_POLL_HZ,
+        state_stream_port: int = DEFAULT_STATE_STREAM_PORT,
     ):
         self._fci_ip = fci_ip
         self.cmd_port = cmd_port
+        self._state_stream_port = state_stream_port
         self._state_interval = 1.0 / max(1.0, float(state_poll_hz))
 
         # Controller — only accessed by controller thread (+ its helpers)
@@ -136,6 +139,8 @@ class RobotServer:
         # Command queue — main thread writes, controller thread reads
         self._cmd_queue: queue.Queue[_QueuedCommand] = queue.Queue()
         self._cmd_event = threading.Event()
+        self._streaming_set: dict | None = None
+        self._streaming_set_lock = threading.Lock()
 
         # Blocking op — main thread sets _busy=True, controller thread clears
         self._busy = False
@@ -180,8 +185,9 @@ class RobotServer:
 
             identity = parts[0]
             response = self._dispatch(parts[2])
-            packed = msgpack.packb(response, use_bin_type=True)
-            self._cmd_socket.send_multipart([identity, b"", packed])
+            if response is not None:
+                packed = msgpack.packb(response, use_bin_type=True)
+                self._cmd_socket.send_multipart([identity, b"", packed])
 
         # Shutdown: tell controller thread to exit, then clean up
         self._cmd_event.set()
@@ -206,7 +212,7 @@ class RobotServer:
 
     # ── Main thread: dispatch ─────────────────────────────────────
 
-    def _dispatch(self, raw: bytes) -> dict:
+    def _dispatch(self, raw: bytes) -> dict | None:
         """Route a ZMQ message to the appropriate handler.
 
         Called on main thread. Never touches self._controller.
@@ -239,7 +245,14 @@ class RobotServer:
             return self._enqueue(command, params, blocking=True)
 
         # ---- Fast commands ----
-        if command in ("switch", "set", "is_running"):
+        if command == "set":
+            if not self._busy:
+                with self._streaming_set_lock:
+                    self._streaming_set = params
+                self._cmd_event.set()
+            return None
+
+        if command in ("switch", "is_running"):
             if self._busy:
                 return {"success": False, "error": "Worker busy"}
             return self._enqueue(command, params)
@@ -292,31 +305,56 @@ class RobotServer:
           2. Check if blocking helper finished
           3. Poll state if idle
         """
-        while self._running:
-            self._cmd_event.wait(timeout=self._state_interval)
-            self._cmd_event.clear()
+        state_push = self._ctx.socket(zmq.PUSH)
+        state_push.setsockopt(zmq.SNDHWM, 2)
+        state_push.bind(f"tcp://*:{self._state_stream_port}")
 
-            # 1. Process all pending commands
-            while True:
-                try:
-                    cmd = self._cmd_queue.get_nowait()
-                except queue.Empty:
-                    break
-                self._process_command(cmd)
+        try:
+            while self._running:
+                self._cmd_event.wait(timeout=self._state_interval)
+                self._cmd_event.clear()
 
-            # 2. Check if blocking helper finished naturally
-            if self._blocking_thread is not None:
-                if not self._blocking_thread.is_alive():
-                    self._blocking_thread.join()
-                    self._blocking_thread = None
-                    self._busy = False
+                # 1. Apply the latest streaming set target.
+                set_params = None
+                with self._streaming_set_lock:
+                    if self._streaming_set is not None:
+                        set_params = self._streaming_set
+                        self._streaming_set = None
 
-            # 3. Poll state when idle
-            if self._controller is not None and not self._busy:
-                self._poll_state()
+                if set_params is not None and not self._busy:
+                    try:
+                        self._do_set(set_params)
+                    except Exception as e:
+                        logger.warning("Streaming set failed: %s", e)
 
-        # Cleanup controller on exit
-        self._destroy_controller()
+                # 2. Process all pending commands
+                while True:
+                    try:
+                        cmd = self._cmd_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    self._process_command(cmd)
+
+                # 3. Check if blocking helper finished naturally
+                if self._blocking_thread is not None:
+                    if not self._blocking_thread.is_alive():
+                        self._blocking_thread.join()
+                        self._blocking_thread = None
+                        self._busy = False
+
+                # 4. Poll state when idle and push the latest cache.
+                if self._controller is not None and not self._busy:
+                    self._poll_state()
+                    with self._state_lock:
+                        state_dict = self._cached_state.to_dict()
+                    try:
+                        packed = msgpack.packb(state_dict, use_bin_type=True)
+                        state_push.send(packed, zmq.NOBLOCK)
+                    except zmq.Again:
+                        pass
+        finally:
+            state_push.close()
+            self._destroy_controller()
 
     def _process_command(self, cmd: _QueuedCommand) -> None:
         """Dispatch a queued command. Called on controller thread."""
@@ -595,6 +633,12 @@ def main():
                         help="Franka robot FCI IP address")
     parser.add_argument("--port", type=int, default=DEFAULT_CMD_PORT,
                         help=f"ZMQ port (default: {DEFAULT_CMD_PORT})")
+    parser.add_argument(
+        "--state-stream-port",
+        type=int,
+        default=DEFAULT_STATE_STREAM_PORT,
+        help=f"State stream port (default: {DEFAULT_STATE_STREAM_PORT})",
+    )
     parser.add_argument("--poll-hz", type=float, default=DEFAULT_STATE_POLL_HZ,
                         help=f"State poll Hz (default: {DEFAULT_STATE_POLL_HZ})")
     parser.add_argument("--log-level", default="INFO",
@@ -606,8 +650,12 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    server = RobotServer(fci_ip=args.fci_ip, cmd_port=args.port,
-                         state_poll_hz=args.poll_hz)
+    server = RobotServer(
+        fci_ip=args.fci_ip,
+        cmd_port=args.port,
+        state_poll_hz=args.poll_hz,
+        state_stream_port=args.state_stream_port,
+    )
 
     def _signal_handler(sig, frame):
         logger.info("Received signal %d, shutting down ...", sig)
