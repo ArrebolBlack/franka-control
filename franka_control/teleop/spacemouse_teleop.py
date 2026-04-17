@@ -38,7 +38,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Default action scale: (translation [m], rotation [rad])
-DEFAULT_ACTION_SCALE = (0.04, 0.2)
+DEFAULT_ACTION_SCALE = (2.0, 5.0)
 
 # Default deadzone: ignore input with norm below this
 DEFAULT_DEADZONE = 0.001
@@ -71,6 +71,7 @@ class SpaceMouseTeleop:
         deadzone: Input with L2 norm below this is treated as zero.
         axis_remap: List of (source_axis, sign) tuples defining the
             coordinate frame mapping from SpaceMouse to robot base.
+        freeze_rotation: If True, ignore rotation input (3-DOF only).
         gripper_mode: "binary" (left=close, right=open) or None
             (no gripper control from SpaceMouse).
     """
@@ -80,6 +81,7 @@ class SpaceMouseTeleop:
         action_scale: tuple[float, float] = DEFAULT_ACTION_SCALE,
         deadzone: float = DEFAULT_DEADZONE,
         axis_remap: Optional[list[tuple[str, int]]] = None,
+        freeze_rotation: bool = False,
         gripper_mode: Optional[str] = "binary",
     ):
         if pyspacemouse is None:
@@ -91,6 +93,7 @@ class SpaceMouseTeleop:
         self._action_scale = action_scale
         self._deadzone = deadzone
         self._axis_remap = axis_remap or DEFAULT_AXIS_REMAP
+        self._freeze_rotation = freeze_rotation
         self._gripper_mode = gripper_mode
         self._last_gripper = 1.0  # default open
 
@@ -175,6 +178,10 @@ class SpaceMouseTeleop:
         translation *= self._action_scale[0]
         rotation *= self._action_scale[1]
 
+        # Freeze rotation: zero out rotation component
+        if self._freeze_rotation:
+            rotation[:] = 0
+
         robot_action = np.concatenate([translation, rotation])
 
         # Gripper
@@ -221,6 +228,10 @@ class SpaceMouseTeleop:
             return teleop_action, info
         info["intervened"] = False
         return action.copy(), info
+
+    def set_freeze_rotation(self, freeze: bool) -> None:
+        """Toggle rotation freezing at runtime."""
+        self._freeze_rotation = freeze
 
     # ── Cleanup ───────────────────────────────────────────────────
 

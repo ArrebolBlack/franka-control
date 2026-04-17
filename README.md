@@ -9,17 +9,19 @@ Franka Research 3 机械臂控制库。双机架构：算法机（GPU）通过 T
 算法机 (Python)                          控制机 (RT kernel)
 ├── FrankaEnv (Gymnasium)                ├── RobotServer (TCP 5555)
 │   └── RobotClient (ZMQ DEALER)         │   └─ FrankaRemoteController (本地)
-├── SpaceMouse 遥操作                     │       └─ aiofranka 子进程 (IPC/SharedMemory)
-├── TOPPRA 轨迹规划                       ├── GripperServer (TCP 5556)
-├── 数据采集 (LeRobot 格式)               │   └─ pylibfranka.Gripper (本地)
-└── 相机管理 (RealSense)                  └── Franka Research 3
+│       └─ PULL 状态接收 (port 5557)     │       └─ aiofranka 子进程 (IPC/SharedMemory)
+├── 遥操作 (SpaceMouse/Keyboard)          ├── GripperServer (TCP 5556)
+├── TOPPRA 轨迹规划                       │   └─ pylibfranka.Gripper (本地)
+├── 数据采集 (LeRobot 格式)               └── Franka Research 3
+└── 相机管理 (RealSense)
         ↕ TCP ZMQ (msgpack)
 ```
 
 ### 双机部署
 
-- **控制机**：运行 RobotServer（端口 5555）+ GripperServer（端口 5556），需要 aiofranka + pylibfranka
+- **控制机**：运行 RobotServer（端口 5555 + 状态流 5557）+ GripperServer（端口 5556），需要 aiofranka + pylibfranka
 - **算法机**：运行 FrankaEnv / 脚本，通过 TCP ZMQ 与控制机通信，不需要安装 FCI 相关库
+- **流式架构**：set() fire-and-forget + PUSH/PULL 状态流（1kHz），热路径零 RTT；阻塞命令（connect/move/start）仍走同步 RPC
 
 ### IP 参数说明
 
@@ -44,7 +46,8 @@ franka_control/
 ├── envs/
 │   └── franka_env.py        # Gymnasium 环境
 ├── teleop/
-│   └── spacemouse_teleop.py # SpaceMouse 遥操作
+│   ├── spacemouse_teleop.py # SpaceMouse 遥操作
+│   └── keyboard_teleop.py  # 键盘遥操作
 ├── cameras/
 │   └── camera_manager.py    # RealSense 多相机管理
 ├── data/
@@ -71,6 +74,9 @@ pip install toppra
 # 遥操作 (需要 SpaceMouse)
 sudo apt install libhidapi-hidraw0 libhidapi-libusb0
 pip install pyspacemouse hidapi
+
+# 遥操作 (键盘模式)
+pip install pynput
 
 # SpaceMouse USB 权限（免 sudo 访问 HID 设备）
 sudo tee /etc/udev/rules.d/99-spacemouse.rules > /dev/null << 'RULES'
@@ -139,9 +145,23 @@ c.close()
 ### 第3步：算法机控制机器人
 
 ```bash
-# 遥操作（需要 SpaceMouse 连在算法机上）
+# 遥操作 — SpaceMouse（默认）
+# 默认 100Hz, 平移 2.0 m/s, 旋转 5.0 rad/s（速度模式）
 python -m franka_control.scripts.teleop \
     --robot-ip 192.168.0.100
+
+# 遥操作 — 键盘
+python -m franka_control.scripts.teleop \
+    --robot-ip 192.168.0.100 --device keyboard
+
+# 调灵敏度（直接改最大速度）
+python -m franka_control.scripts.teleop \
+    --robot-ip 192.168.0.100 \
+    --action-scale-t 1.0 --action-scale-r 2.5
+
+# 冻结旋转（只保留平移）
+python -m franka_control.scripts.teleop \
+    --robot-ip 192.168.0.100 --freeze-rotation
 
 # 或采集 waypoint
 python -m franka_control.scripts.collect_waypoints \
@@ -263,5 +283,5 @@ python -m pytest tests/ -v
 - **机器人**：Franka Research 3 + FCI 许可
 - **控制机**：Ubuntu 24 + PREEMPT_RT 内核，运行 RobotServer + GripperServer
 - **算法机**：Python 3.10+，通过 TCP ZMQ 与控制机通信
-- **遥操作**：3Dconnexion SpaceMouse Compact
+- **遥操作**：3Dconnexion SpaceMouse Compact 或键盘（需桌面环境）
 - **相机**（可选）：Intel RealSense（D435 等）

@@ -47,7 +47,7 @@ python -m pytest tests/test_gripper.py -v  # 单个测试文件
 python -m pytest tests/ -k "test_name" -v  # 单个测试用例
 ```
 
-测试覆盖：仅 `test_gripper.py`（22 个测试用例，覆盖序列化/分发/worker线程/ZMQ端到端）。其余模块（env、robot、teleop、camera、data、trajectory）暂无测试。
+测试覆盖：`test_gripper.py`（22 个测试用例）、`test_keyboard_teleop.py`（8 个测试用例）。其余模块（env、robot、spacemouse_teleop、camera、data、trajectory）暂无测试。
 
 ### 启动服务（控制机）
 
@@ -80,17 +80,18 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 算法机 (Python)                          控制机 (RT kernel)
 ├── FrankaEnv (Gymnasium)                ├── RobotServer (TCP 5555)
 │   └── RobotClient (ZMQ DEALER)         │   └─ FrankaRemoteController
-│                                        │       └─ aiofranka 子进程 (IPC/SharedMemory)
-├── SpaceMouse 遥操作                     ├── GripperServer (TCP 5556)
+│       └─ PULL 状态接收 (port 5557)     │       └─ aiofranka 子进程 (IPC/SharedMemory)
+├── 遥操作 (SpaceMouse/Keyboard)          ├── GripperServer (TCP 5556)
 ├── TOPPRA 轨迹规划                       │   └─ pylibfranka.Gripper
 ├── 数据采集 (LeRobot 格式)               └── Franka Research 3
 └── 相机管理 (RealSense)
-        ↕ TCP ZMQ (msgpack 序列化)
 ```
 
 ### 通信层
 
-- ZMQ ROUTER/DEALER + msgpack 序列化
+- ZMQ ROUTER/DEALER + msgpack 序列化（阻塞命令：connect/start/move/switch/get_state）
+- ZMQ PUSH/PULL 状态流（端口 5557）：服务端 1kHz 推送，客户端后台接收最新帧
+- set() 命令 fire-and-forget：客户端只发不等回复，服务端 latest-wins 单槽处理
 - numpy 数组序列化为 bytes + shape 元数据
 - GripperServer 使用 3 线程模式：主循环（ZMQ recv）、worker 线程（阻塞 pylibfranka 调用）、状态轮询线程
 - RobotServer 使用 2 线程模式：主循环（ZMQ recv）+ 控制器线程（拥有 FrankaRemoteController，连接/轮询在同一线程）；阻塞操作（move）生成临时辅助线程
@@ -100,8 +101,8 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 
 - `FrankaEnv` → `RobotClient` + `GripperClient`（不直接依赖 aiofranka）
 - `TrajectoryPlanner` → `WaypointStore` + 从 `FrankaEnv` 导入关节限位常量
-- Scripts → `FrankaEnv` / `TrajectoryPlanner` / `WaypointStore` / `SpaceMouseTeleop`
-- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pyrealsense2）；lerobot 无保护，导入即依赖
+- Scripts → `FrankaEnv` / `TrajectoryPlanner` / `WaypointStore` / `SpaceMouseTeleop` / `KeyboardTeleop`
+- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pynput, pyrealsense2）；lerobot 无保护，导入即依赖
 
 ### FrankaEnv 核心
 
@@ -119,6 +120,9 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 - Home 位置：`[0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]` rad
 - 关节 delta 限制：±0.1 rad/step
 - 夹爪最大宽度：0.08m，默认抓力 40N
+- 遥操作默认参数：100Hz、平移 2.0 m/s、旋转 5.0 rad/s（速度模式，频率无关）
+- 遥操作设备：SpaceMouse（后台进程轮询）和 Keyboard（pynput 真实 keydown/keyup），通过 `--device` 选择
+- `freeze_rotation`：构造参数 + `set_freeze_rotation()` 运行时切换，冻结旋转只保留平移
 - 轨迹规划约束：aiofranka 参数的 80%（vel ~8 rad/s, acc ~4 rad/s²）
 - ZMQ 超时：RobotClient 5s socket / 60s connect/start / 30s move；GripperClient 10s socket
 
