@@ -54,7 +54,8 @@ franka_control/
 │   └── collector.py         # LeRobot 格式数据采集
 ├── trajectory/
 │   ├── waypoints.py         # Waypoint/Route YAML 管理
-│   └── planner.py           # TOPPRA 轨迹规划 + 执行
+│   ├── planner.py           # TOPPRA 轨迹规划
+│   └── executor.py          # Route 拆分 + 轨迹执行
 └── scripts/
     ├── teleop.py            # 遥操作
     ├── collect_data.py      # 数据采集
@@ -163,9 +164,15 @@ python -m franka_control.scripts.teleop \
 python -m franka_control.scripts.teleop \
     --robot-ip 192.168.0.100 --freeze-rotation
 
-# 或采集 waypoint
+# 或采集 waypoint（支持 keyboard 和 spacemouse）
 python -m franka_control.scripts.collect_waypoints \
     --robot-ip 192.168.0.100 \
+    --waypoints config/waypoints.yaml
+
+# 键盘模式采集 waypoint
+python -m franka_control.scripts.collect_waypoints \
+    --robot-ip 192.168.0.100 \
+    --device keyboard \
     --waypoints config/waypoints.yaml
 ```
 
@@ -180,12 +187,29 @@ python -m franka_control.scripts.run_trajectory \
     --route pick_place \
     --dry-run
 
-# 真机执行
+# 真机执行（--time-scale 3.0 减速，推荐首次使用）
+python -m franka_control.scripts.run_trajectory \
+    --robot-ip 192.168.0.100 \
+    --waypoints config/waypoints.yaml \
+    --route pick_place \
+    --time-scale 3.0
+
+# 全速执行
 python -m franka_control.scripts.run_trajectory \
     --robot-ip 192.168.0.100 \
     --waypoints config/waypoints.yaml \
     --route pick_place
+
+# 循环执行
+python -m franka_control.scripts.run_trajectory \
+    --robot-ip 192.168.0.100 \
+    --waypoints config/waypoints.yaml \
+    --route pick_place \
+    --time-scale 3.0 \
+    --loop
 ```
+
+**注意**：PID 控制器无速度前馈，`--time-scale` 通过拉长时间戳减速。经验值 `3.0`（原速 1/3）。
 
 ### 常见问题
 
@@ -236,20 +260,18 @@ env.close()
 ### 轨迹规划
 
 ```python
-from franka_control.trajectory.planner import TrajectoryPlanner, execute_route
+from franka_control.trajectory.planner import TrajectoryPlanner
+from franka_control.trajectory.executor import execute_route
 from franka_control.trajectory.waypoints import WaypointStore
 import numpy as np
 
 store = WaypointStore()
 store.load("config/waypoints.yaml")
 
-planner = TrajectoryPlanner(
-    vel_scale=1.0,  # 默认 aiofranka 参数的 80%
-    acc_scale=1.0,
-)
+planner = TrajectoryPlanner()  # 默认 80% 的 aiofranka 参数
 
-# 在真机上执行完整 route
-execute_route(env, store, "pick_place", planner)
+# 在真机上执行完整 route（time_scale 减速）
+execute_route(env, store, "pick_place", planner, time_scale=3.0)
 ```
 
 ## Waypoint YAML 格式

@@ -34,10 +34,11 @@ import time
 import numpy as np
 
 from franka_control.envs.franka_env import FrankaEnv
+from franka_control.trajectory.executor import execute_route, split_route
 from franka_control.trajectory.planner import (
+    DEFAULT_ACC_LIMITS,
+    DEFAULT_VEL_LIMITS,
     TrajectoryPlanner,
-    execute_route,
-    split_route,
 )
 from franka_control.trajectory.waypoints import WaypointStore
 
@@ -74,6 +75,10 @@ def main():
         help="Acceleration limit scale factor (default: 1.0)",
     )
     parser.add_argument(
+        "--time-scale", type=float, default=1.0,
+        help="Execution time stretch factor (default: 1.0, 2.0 = half speed)",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Plan only, print trajectory info, do not connect to robot",
     )
@@ -102,30 +107,32 @@ def main():
         return
 
     # Create planner
-    from franka_control.trajectory.planner import DEFAULT_VEL_LIMITS, DEFAULT_ACC_LIMITS
     planner = TrajectoryPlanner(
         vel_limits=DEFAULT_VEL_LIMITS * args.vel_scale,
         acc_limits=DEFAULT_ACC_LIMITS * args.acc_scale,
     )
 
     # Plan all segments
-    segments = split_route(store, args.route)
+    result = split_route(store, args.route)
     trajs = []
-    for i, seg in enumerate(segments):
+    for i, seg in enumerate(result.segments):
         traj = planner.plan(seg.waypoints, control_hz=args.control_hz)
         trajs.append(traj)
         logger.info(
             "Segment %d/%d: %d waypoints, %.3f s, %d steps%s",
-            i + 1, len(segments),
+            i + 1, len(result.segments),
             len(seg.waypoints), traj.timestamps[-1], len(traj.timestamps),
             f", gripper={seg.gripper_action.action}" if seg.gripper_action else "",
         )
 
-    total_time = sum(t.timestamps[-1] for t in trajs)
-    logger.info("Total trajectory time: %.3f s", total_time)
+    total_time = sum(t.timestamps[-1] for t in trajs) * args.time_scale
+    logger.info(
+        "Total trajectory time: %.3f s (time_scale=%.1f)",
+        total_time, args.time_scale,
+    )
 
     if args.dry_run:
-        _print_trajectory_details(segments, trajs, store)
+        _print_trajectory_details(result, trajs)
         return
 
     # Validate robot connection
@@ -159,7 +166,8 @@ def main():
             env.move_to(first_qpos)
 
             # Execute route
-            execute_route(env, store, args.route, planner, args.control_hz)
+            execute_route(env, store, args.route, planner, args.control_hz,
+                          time_scale=args.time_scale)
 
             logger.info("Run %d completed.", run_count)
 
@@ -176,11 +184,14 @@ def main():
         logger.info("Done. Total runs: %d", run_count)
 
 
-def _print_trajectory_details(segments, trajs, store):
+def _print_trajectory_details(result, trajs):
     """Print detailed trajectory info for dry-run."""
-    for i, (seg, traj) in enumerate(zip(segments, trajs)):
+    if result.pre_gripper_action:
+        print(f"\nPre-route gripper: {result.pre_gripper_action.action}")
+
+    for i, (seg, traj) in enumerate(zip(result.segments, trajs)):
         print(f"\n{'='*60}")
-        print(f"Segment {i + 1}/{len(segments)}")
+        print(f"Segment {i + 1}/{len(result.segments)}")
         print(f"  Waypoints: {len(seg.waypoints)}")
         print(f"  Duration:  {traj.timestamps[-1]:.3f} s")
         print(f"  Steps:     {len(traj.timestamps)}")
@@ -201,7 +212,7 @@ def _print_trajectory_details(segments, trajs, store):
 
     print(f"\n{'='*60}")
     total = sum(t.timestamps[-1] for t in trajs)
-    print(f"Total time: {total:.3f} s ({len(segments)} segments)")
+    print(f"Total time: {total:.3f} s ({len(result.segments)} segments)")
 
 
 if __name__ == "__main__":

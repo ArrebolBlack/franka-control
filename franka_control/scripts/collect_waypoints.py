@@ -1,15 +1,19 @@
-"""Interactive waypoint collection tool using SpaceMouse.
+"""Interactive waypoint collection tool.
 
-Uses SpaceMouse for Cartesian delta control and keyboard commands
+Uses SpaceMouse or keyboard for teleoperation and keyboard commands
 for recording/managing waypoints and routes.
 
 Usage:
     python -m franka_control.scripts.collect_waypoints \\
         --robot-ip 172.16.0.2 \\
-        --gripper-host 172.16.0.2 \\
         --waypoints config/waypoints.yaml
 
-Controls:
+    python -m franka_control.scripts.collect_waypoints \\
+        --robot-ip 172.16.0.2 \\
+        --device keyboard \\
+        --waypoints config/waypoints.yaml
+
+Controls (Spacemouse device):
     SpaceMouse: 6-DOF Cartesian delta control
     Left button: close gripper, Right button: open gripper
 
@@ -21,6 +25,19 @@ Controls:
         l  — List all waypoints and routes
         w  — Save to YAML file
         q  — Quit (auto-saves)
+
+Controls (Keyboard device):
+    WASDRF: translation, QEZXC: rotation
+    Space: close gripper, Enter: open gripper
+    Shift: slow mode (0.25x)
+    Number keys for commands:
+        1  — Record current pose as waypoint
+        2  — Goto waypoint
+        3  — Create route
+        4  — Delete waypoint or route
+        5  — List all
+        6  — Save
+        Esc — Quit (auto-saves)
 """
 
 from __future__ import annotations
@@ -37,7 +54,7 @@ import tty
 import numpy as np
 
 from franka_control.envs.franka_env import FrankaEnv
-from franka_control.teleop.spacemouse_teleop import SpaceMouseTeleop
+from franka_control.teleop import KeyboardTeleop, SpaceMouseTeleop
 from franka_control.trajectory.waypoints import GripperAction, WaypointStore
 
 logging.basicConfig(
@@ -60,6 +77,12 @@ def _set_raw(fd: int) -> list:
 def _set_normal(fd: int, old_settings: list) -> None:
     """Restore terminal to normal mode."""
     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def _drain_stdin(fd: int) -> None:
+    """Discard any buffered bytes on stdin (e.g. after terminal mode switch)."""
+    while select.select([fd], [], [], 0.0)[0]:
+        os.read(fd, 1)
 
 
 def _read_key_raw(fd: int, timeout: float = 0.01) -> str | None:
@@ -89,6 +112,12 @@ def main():
     parser.add_argument(
         "--waypoints", default="config/waypoints.yaml",
         help="YAML file path (default: config/waypoints.yaml)",
+    )
+    parser.add_argument(
+        "--device",
+        default="spacemouse",
+        choices=["spacemouse", "keyboard"],
+        help="Teleop device (default: spacemouse)",
     )
     parser.add_argument(
         "--action-scale-t", type=float, default=0.04,
@@ -128,10 +157,27 @@ def main():
         gripper_mode="binary" if use_gripper else "continuous",
     )
 
-    teleop = SpaceMouseTeleop(
+    use_keyboard = args.device == "keyboard"
+    teleop_cls = KeyboardTeleop if use_keyboard else SpaceMouseTeleop
+    teleop = teleop_cls(
         action_scale=(args.action_scale_t, args.action_scale_r),
         gripper_mode="binary" if use_gripper else None,
     )
+
+    # Command key mappings: spacemouse uses letters, keyboard uses numbers
+    # (to avoid conflict with WASDRF/QEZXC movement keys)
+    if use_keyboard:
+        CMD_KEYS = {
+            "1": "record", "2": "goto", "3": "route",
+            "4": "delete", "5": "list", "6": "save",
+        }
+        EXIT_KEYS = {"\x1b", "\x03"}  # Esc, Ctrl+C
+    else:
+        CMD_KEYS = {
+            "r": "record", "g": "goto", "p": "route",
+            "d": "delete", "l": "list", "w": "save",
+        }
+        EXIT_KEYS = {"q", "\x03"}  # q, Ctrl+C
 
     fd = sys.stdin.fileno()
     old_term = _set_raw(fd)
@@ -142,33 +188,53 @@ def main():
     try:
         logger.info("Connecting to robot...")
         obs, _ = env.reset()
-        logger.info("Ready. Controls: r=record g=goto p=route d=delete l=list w=save q=quit")
+        if use_keyboard:
+            logger.info(
+                "Ready. Movement: WASDRF=translate QEZXC=rotate Space=close Enter=open Shift=slow\n"
+                "        Commands: 1=record 2=goto 3=route 4=delete 5=list 6=save Esc=quit"
+            )
+        else:
+            logger.info(
+                "Ready. SpaceMouse: left-btn=close right-btn=open\n"
+                "        Commands: r=record g=goto p=route d=delete l=list w=save q=quit"
+            )
 
         dt = 1.0 / args.hz
 
         while True:
             t_start = time.time()
 
-            # Check keyboard
+            # Check keyboard commands
             key = _read_key_raw(fd, timeout=0.0)
             if key:
-                if key in ("q", "\x03"):  # q or Ctrl+C
+                if key in EXIT_KEYS:
                     break
-                elif key == "r":
-                    _handle_record(env, store, fd, old_term)
-                elif key == "g":
-                    _handle_goto(env, store, fd, old_term)
-                elif key == "p":
-                    _handle_route(store, fd, old_term)
-                elif key == "d":
-                    _handle_delete(store, fd, old_term)
-                elif key == "l":
-                    _handle_list(store, fd, old_term)
-                elif key == "w":
-                    _handle_save(store, args.waypoints, fd, old_term)
+                cmd = CMD_KEYS.get(key)
+                if cmd:
+                    if cmd == "record":
+                        _handle_record(env, store, fd, old_term)
+                    elif cmd == "goto":
+                        _handle_goto(env, store, fd, old_term)
+                    elif cmd == "route":
+                        _handle_route(store, fd, old_term)
+                    elif cmd == "delete":
+                        _handle_delete(store, fd, old_term)
+                    elif cmd == "list":
+                        _handle_list(store, fd, old_term)
+                    elif cmd == "save":
+                        _handle_save(store, args.waypoints, fd, old_term)
+
+                    # Clear stale pynput state after command handlers
+                    # (input() Enter press not yet released physically)
+                    if use_keyboard:
+                        teleop.clear_pressed_keys()
 
             # Teleop step
             action, info = teleop.get_action()
+            if use_keyboard:
+                action[:6] *= dt
+            if info.get("exit_requested"):
+                break
             obs, _, _, _, _ = env.step(action)
 
             # Maintain frequency
@@ -196,8 +262,9 @@ def _switch_to_normal(fd, old_term):
 
 
 def _switch_to_raw(fd, old_term):
-    """Switch back to raw terminal."""
+    """Switch back to raw terminal and discard stale bytes."""
     _set_raw(fd)
+    _drain_stdin(fd)
 
 
 def _handle_record(env, store, fd, old_term):
@@ -270,25 +337,33 @@ def _handle_route(store, fd, old_term):
             return
 
         # Ask for gripper actions
-        print("  Enter gripper actions (waypoint_name: open/close, empty to finish):")
+        print("  Enter gripper actions (name_or_index: open/close, empty to finish):")
         gripper_actions = {}
         while True:
             ga_input = prompt_text("    > ")
             if not ga_input:
                 break
             if ":" not in ga_input:
-                print("    Format: waypoint_name: open/close")
+                print("    Format: waypoint_name: open/close  or  index: open/close")
                 continue
-            wp_name, action = ga_input.split(":", 1)
-            wp_name = wp_name.strip()
+            key_str, action = ga_input.split(":", 1)
+            key_str = key_str.strip()
             action = action.strip().lower()
             if action not in ("open", "close"):
                 print(f"    Invalid action '{action}'. Use 'open' or 'close'.")
                 continue
-            if wp_name not in wp_names:
-                print(f"    '{wp_name}' not in route. Skip.")
-                continue
-            gripper_actions[wp_name] = GripperAction(action)
+            # Accept integer index or waypoint name
+            try:
+                key: str | int = int(key_str)
+                if key < 0 or key >= len(wp_names):
+                    print(f"    Index {key} out of range (0-{len(wp_names)-1}). Skip.")
+                    continue
+            except ValueError:
+                key = key_str
+                if key not in wp_names:
+                    print(f"    '{key}' not in route. Skip.")
+                    continue
+            gripper_actions[key] = GripperAction(action)
 
         label = prompt_text("  Label (optional): ")
         store.add_route(route_name, wp_names, gripper_actions or None, label=label)

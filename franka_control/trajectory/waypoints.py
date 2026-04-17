@@ -45,7 +45,7 @@ class Route:
 
     name: str
     waypoints: list[str]  # ordered waypoint names
-    gripper_actions: dict[str, GripperAction] = field(default_factory=dict)
+    gripper_actions: dict[str | int, GripperAction] = field(default_factory=dict)
     label: str = ""
 
 
@@ -62,8 +62,11 @@ class WaypointStore:
           pick_place:
             waypoints: [home, above, grasp, home]
             gripper_actions:
-              grasp: close
+              grasp: close          # by name: matches all occurrences
+              3: open               # by index: matches only position 3
             label: "抓取放置"
+
+    Integer keys in gripper_actions take priority over name keys.
     """
 
     def __init__(self):
@@ -90,9 +93,10 @@ class WaypointStore:
         for name, entry in (data.get("routes") or {}).items():
             wp_names = entry.get("waypoints") or []
             gripper_actions = {}
-            for wp_name, ga in (entry.get("gripper_actions") or {}).items():
+            for key, ga in (entry.get("gripper_actions") or {}).items():
                 action_str = ga if isinstance(ga, str) else ga.get("action", "close")
-                gripper_actions[wp_name] = GripperAction(action=action_str)
+                # key is str (waypoint name) or int (route index)
+                gripper_actions[key] = GripperAction(action=action_str)
             self._routes[name] = Route(
                 name=name,
                 waypoints=wp_names,
@@ -164,7 +168,7 @@ class WaypointStore:
         self,
         name: str,
         waypoint_names: list[str],
-        gripper_actions: Optional[dict[str, GripperAction]] = None,
+        gripper_actions: Optional[dict[str | int, GripperAction]] = None,
         label: str = "",
     ) -> None:
         self._routes[name] = Route(

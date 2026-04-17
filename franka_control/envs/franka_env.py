@@ -440,8 +440,12 @@ class FrankaEnv(gym.Env):
                     width=0.0, speed=GRIPPER_SPEED, force=self._grasp_force
                 )
 
+            # Update state regardless — grasp() returns False when the object
+            # prevents fingers from reaching target width, but the gripper is
+            # still holding the object. Not updating _last_gripper_command
+            # would cause repeated grasp() calls every step.
+            self._last_gripper_command = command
             if ok:
-                self._last_gripper_command = command
                 self._cached_gripper_width = (
                     self._gripper_max_width if command == "open" else 0.0
                 )

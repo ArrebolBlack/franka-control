@@ -100,6 +100,7 @@ class KeyboardTeleop:
         with self._lock:
             pressed_keys = set(self._pressed_keys)
             exit_requested = self._exit_requested
+            self._exit_requested = False  # consume on read
 
         action = np.zeros(6, dtype=np.float64)
         for key_char, (axis, direction) in _CHAR_KEY_TO_AXIS.items():
@@ -160,6 +161,18 @@ class KeyboardTeleop:
     def set_freeze_rotation(self, freeze: bool) -> None:
         """Toggle rotation freezing at runtime."""
         self._freeze_rotation = freeze
+
+    def clear_pressed_keys(self) -> None:
+        """Clear pressed key state.
+
+        Call after terminal mode switches (e.g. input()) to prevent
+        stale key events from triggering unintended actions.
+        Does NOT reset _last_gripper — gripper state is preserved.
+        """
+        with self._lock:
+            self._pressed_keys.clear()
+            self._close_pressed = False
+            self._open_pressed = False
 
     def close(self) -> None:
         """Stop listening to keyboard events."""
