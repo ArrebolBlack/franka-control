@@ -246,8 +246,9 @@ def main():
         logger.error("Error: %s", e)
     finally:
         _restore_terminal()
-        os.makedirs(os.path.dirname(args.waypoints) or ".", exist_ok=True)
-        store.save(args.waypoints)
+        if store.is_dirty():
+            os.makedirs(os.path.dirname(args.waypoints) or ".", exist_ok=True)
+            store.save(args.waypoints)
         teleop.close()
         env.close()
         logger.info("Session ended.")

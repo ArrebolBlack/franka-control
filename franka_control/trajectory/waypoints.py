@@ -72,6 +72,7 @@ class WaypointStore:
     def __init__(self):
         self._waypoints: dict[str, Waypoint] = {}
         self._routes: dict[str, Route] = {}
+        self._dirty: bool = False
 
     # ── Persistence ──────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ class WaypointStore:
 
         self._waypoints.clear()
         self._routes.clear()
+        self._dirty = False
 
         for name, entry in (data.get("waypoints") or {}).items():
             self._waypoints[name] = Waypoint(
@@ -135,6 +137,7 @@ class WaypointStore:
             yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
         logger.info("Saved %d waypoints, %d routes to %s",
                     len(self._waypoints), len(self._routes), path)
+        self._dirty = False
 
     # ── Waypoint CRUD ────────────────────────────────────────────
 
@@ -146,6 +149,7 @@ class WaypointStore:
             joint_angles=np.asarray(joint_angles, dtype=np.float64),
             label=label,
         )
+        self._dirty = True
 
     def get_waypoint(self, name: str) -> Waypoint:
         return self._waypoints[name]
@@ -153,6 +157,7 @@ class WaypointStore:
     def remove_waypoint(self, name: str) -> bool:
         if name in self._waypoints:
             del self._waypoints[name]
+            self._dirty = True
             return True
         return False
 
@@ -177,6 +182,7 @@ class WaypointStore:
             gripper_actions=gripper_actions or {},
             label=label,
         )
+        self._dirty = True
 
     def get_route(self, name: str) -> Route:
         return self._routes[name]
@@ -184,6 +190,7 @@ class WaypointStore:
     def remove_route(self, name: str) -> bool:
         if name in self._routes:
             del self._routes[name]
+            self._dirty = True
             return True
         return False
 
@@ -192,3 +199,7 @@ class WaypointStore:
 
     def list_route_names(self) -> list[str]:
         return list(self._routes.keys())
+
+    def is_dirty(self) -> bool:
+        """Check if there are unsaved changes."""
+        return self._dirty
