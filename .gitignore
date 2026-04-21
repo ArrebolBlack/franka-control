@@ -31,3 +31,10 @@ config/waypoints.yaml
 
 # Data
 data/
+
+# Temporary test scripts
+test_*.py
+
+# Algorithm docs (work in progress)
+docs/com_estimation_algorithm.md
+docs/solve_com.py

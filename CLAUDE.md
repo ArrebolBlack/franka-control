@@ -68,7 +68,10 @@ python -m franka_control.scripts.run_trajectory --waypoints config/waypoints.yam
 python -m franka_control.scripts.measure_latency --robot-ip <控制机IP>  # ZMQ 延迟测量
 ```
 
-IP 参数说明见 README.md（`--fci-ip` = Franka FCI IP，`--robot-ip` = 控制机 IP）。
+**IP 参数说明：**
+- `--fci-ip`：Franka 机器人的 FCI IP（如 192.168.0.2），仅控制机启动 RobotServer 时使用
+- `--robot-ip`：控制机的 IP（算法机连接目标），算法机所有脚本使用
+- `--gripper-host`：Gripper 服务器地址，默认等于 robot-ip
 
 ## 项目结构
 
@@ -139,12 +142,78 @@ franka_control/
 - 轨迹执行：PID 无速度前馈（aiofranka 限制，仅 q_desired/ee_desired/torque），用 `--time-scale` 减速
 - ZMQ 超时：RobotClient 5s socket / 60s connect/start / 30s move；GripperClient 10s socket
 
+## Python API 示例
+
+### FrankaEnv 基本使用
+
+```python
+from franka_control.envs import FrankaEnv
+import numpy as np
+
+env = FrankaEnv(
+    robot_ip="192.168.0.100",    # 控制机 IP
+    action_mode="joint_abs",      # joint_abs / joint_delta / ee_abs / ee_delta
+    gripper_mode="binary",        # binary / continuous
+)
+
+obs, _ = env.reset()
+action = np.append(obs["joint_pos"], 1.0)  # +1 维 gripper (1.0=open, 0.0=close)
+obs, reward, terminated, truncated, info = env.step(action)
+
+env.set_action_mode("ee_delta")  # 运行时切换模式
+env.move_to(target_qpos)         # 阻塞式移动
+env.close()
+```
+
+### 轨迹规划与执行
+
+```python
+from franka_control.trajectory.planner import TrajectoryPlanner
+from franka_control.trajectory.executor import execute_route
+from franka_control.trajectory.waypoints import WaypointStore
+
+store = WaypointStore()
+store.load("config/waypoints.yaml")
+planner = TrajectoryPlanner()
+
+# 在真机上执行 route（time_scale 减速）
+execute_route(env, store, "pick_place", planner, time_scale=3.0)
+```
+
+### Waypoint YAML 格式
+
+```yaml
+waypoints:
+  home:
+    joint_angles: [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
+    label: "安全起始位"
+
+routes:
+  pick_place:
+    waypoints: [home, above_table, grasp_pos, home]
+    gripper_actions:
+      grasp_pos: close
+```
+
+## 常见问题排查
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| `Server timeout` | 算法机连不上控制机 | 检查 IP、防火墙、端口 5555/5556 |
+| `Robot command failed: stop` | 机器人未解锁或 FCI 未启动 | Desk 网页解锁 FCI |
+| `Reflex` 模式导致 connect 失败 | disconnect 后机器人进入错误保护 | RobotServer 会自动调用 `automatic_error_recovery()` |
+| `aiofranka is not installed` | 控制机未安装 aiofranka | 控制机上 `pip install aiofranka` |
+| `Worker busy` | 上一个阻塞命令还在执行 | 等待完成，或重启 RobotServer |
+| `Already connected` | RobotServer 已有连接 | 重启 RobotServer |
+| Gripper homing 超时 | 首次 homing 较慢 | 客户端 RCVTIMEO 已设为 10s，重启 GripperServer 后重试 |
+
 ## 关键设计决策
 
 - aiofranka 不修改，固定在控制机，通过 RobotServer TCP 桥接暴露
 - 上层借鉴 serl_robot_infra 设计模式（Gym Env、遥操作），重新实现
 - 轨迹规划在算法机离线完成（样条+TOPPRA），采样后逐点 `env.step()` 执行；PID 无速度前馈，用 `--time-scale 3.0` 减速（经验值）
 - 夹爪独立进程+ZMQ（aiofranka 的 GripperController 是 Robotiq，本项目新建 Franka Gripper 版本）
+- **夹爪动作必然阻塞机械臂**：pylibfranka.Gripper.grasp()/move() 在 C++ 层（libfranka）就是同步阻塞的，Franka FCI 同一时间只允许一个活跃控制连接。即使 GripperServer 用 worker 线程隔离，机械臂控制仍被挂起直到夹爪完成（grasp ~1-2s，move ~0.5s）。架构层面无法规避，这是 Franka 硬件限制。
 - 算法机和控制机共用一个代码仓库
 
 ## 参考库
