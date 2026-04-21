@@ -29,6 +29,7 @@ pip install numpy scipy gymnasium pyyaml pyzmq msgpack
 
 # 按需安装
 pip install toppra          # 轨迹规划
+pip install pin             # 运动学（FK/IK），注意：不是 pinocchio 包
 pip install pyspacemouse    # 遥操作
 pip install pyrealsense2    # 相机
 pip install lerobot         # 数据采集
@@ -37,7 +38,7 @@ pip install lerobot         # 数据采集
 pip install pylibfranka aiofranka
 ```
 
-没有 pyproject.toml / setup.py，当前手动 pip 安装。
+有 `pyproject.toml`（setuptools backend），可用 `pip install -e .` 安装。
 
 ### 运行测试
 
@@ -47,7 +48,9 @@ python -m pytest tests/test_gripper.py -v  # 单个测试文件
 python -m pytest tests/ -k "test_name" -v  # 单个测试用例
 ```
 
-测试覆盖：`test_gripper.py`（22 个测试用例）、`test_keyboard_teleop.py`（8 个测试用例）。其余模块（env、robot、spacemouse_teleop、camera、data、trajectory）暂无测试。
+测试可直接在仓库根目录运行；当前 pytest root/config 由 `pyproject.toml` 提供。
+
+测试覆盖：`test_gripper.py`（23 个测试用例）、`test_keyboard_teleop.py`（8 个测试用例），共 31 个测试。其余模块（env、robot、spacemouse_teleop、camera、data、trajectory）暂无测试。
 
 ### 启动服务（控制机）
 
@@ -80,6 +83,11 @@ franka_control/
 ├── robot/                   # 双机 TCP 桥接（robot_server + robot_client）
 ├── gripper/                 # 夹爪 ZMQ 服务（gripper_server + gripper_client）
 ├── envs/franka_env.py       # Gymnasium 环境
+├── kinematics/              # FK/IK 求解器（Pinocchio）
+│   ├── ik_solver.py         # IKSolver 类
+│   ├── assets/              # FR3v2 URDF + mesh 文件
+│   ├── verify_fk.py         # FK 验证脚本
+│   └── verify_ik.py         # IK 验证脚本
 ├── teleop/                  # SpaceMouse + Keyboard 遥操作
 ├── cameras/camera_manager.py # RealSense 多相机管理
 ├── data/collector.py        # LeRobot 格式数据采集
@@ -94,9 +102,10 @@ franka_control/
 ├── FrankaEnv (Gymnasium)                ├── RobotServer (TCP 5555)
 │   └── RobotClient (ZMQ DEALER)         │   └─ FrankaRemoteController
 │       └─ PULL 状态接收 (port 5557)     │       └─ aiofranka 子进程 (IPC/SharedMemory)
-├── 遥操作 (SpaceMouse/Keyboard)          ├── GripperServer (TCP 5556)
-├── TOPPRA 轨迹规划                       │   └─ pylibfranka.Gripper
-├── 数据采集 (LeRobot 格式)               └── Franka Research 3
+├── IKSolver (Pinocchio)                 ├── GripperServer (TCP 5556)
+├── 遥操作 (SpaceMouse/Keyboard)          │   └─ pylibfranka.Gripper
+├── TOPPRA 轨迹规划                       └── Franka Research 3
+├── 数据采集 (LeRobot 格式)
 └── 相机管理 (RealSense)
 ```
 
@@ -113,11 +122,13 @@ franka_control/
 ### 模块依赖关系
 
 - `FrankaEnv` → `RobotClient` + `GripperClient`（不直接依赖 aiofranka）
+- `IKSolver`（纯 Pinocchio FK/IK，零项目内依赖）→ 内置 FR3v2 URDF + mesh
 - `TrajectoryPlanner`（纯 TOPPRA 规划，零项目内依赖）→ `WaypointStore`（YAML 数据层）
 - `executor.py`（route 拆分 + 执行）→ `planner` + `waypoints` + `FrankaEnv`
 - Scripts → `FrankaEnv` / `TrajectoryPlanner` / `WaypointStore` / `SpaceMouseTeleop` / `KeyboardTeleop`
-- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pynput, pyrealsense2）；lerobot 无保护，导入即依赖
+- 可选依赖通过 try/except 优雅降级（aiofranka, pylibfranka, pyspacemouse, pynput, pyrealsense2, pin）；lerobot 无保护，导入即依赖
 - `trajectory/__init__.py` 为空，不做 re-export（避免 toppra 成为包级硬依赖）
+- `kinematics/assets/` 包含 FR3v2 URDF + mesh 文件（从 frankarobotics/franka_description 生成）
 
 ### FrankaEnv 核心
 
@@ -180,6 +191,36 @@ planner = TrajectoryPlanner()
 execute_route(env, store, "pick_place", planner, time_scale=3.0)
 ```
 
+### 运动学（FK/IK）
+
+```python
+from franka_control.kinematics import IKSolver
+import numpy as np
+
+# 默认加载 FR3v2 + 法兰坐标系
+solver = IKSolver()
+
+# 正运动学：关节角 → 末端位姿
+q = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785])
+T = solver.fk(q)  # 4x4 齐次变换矩阵
+print(f"Position: {T[:3, 3]}")
+
+# 逆运动学：末端位姿 → 关节角
+q_init = q  # 初值
+q_solution, converged = solver.ik(q_init, T)
+if converged:
+    print(f"IK solution: {q_solution}")
+```
+
+**验证脚本：**
+```bash
+# FK 验证（对比真机状态）
+python -m franka_control.kinematics.verify_fk --robot-ip <控制机IP>
+
+# IK 验证（多构型收敛性测试）
+python -m franka_control.kinematics.verify_ik --robot-ip <控制机IP>
+```
+
 ### Waypoint YAML 格式
 
 ```yaml
@@ -206,6 +247,8 @@ routes:
 | `Worker busy` | 上一个阻塞命令还在执行 | 等待完成，或重启 RobotServer |
 | `Already connected` | RobotServer 已有连接 | 重启 RobotServer |
 | Gripper homing 超时 | 首次 homing 较慢 | 客户端 RCVTIMEO 已设为 10s，重启 GripperServer 后重试 |
+| `No module named 'pinocchio'` | 未安装 pin 包 | `pip install pin`（不是 pinocchio） |
+| `pinocchio has no attribute buildModelFromUrdf` | 安装了错误的 pinocchio 包 | `pip uninstall pinocchio && pip install pin` |
 
 ## 关键设计决策
 
@@ -215,6 +258,7 @@ routes:
 - 夹爪独立进程+ZMQ（aiofranka 的 GripperController 是 Robotiq，本项目新建 Franka Gripper 版本）
 - **夹爪动作必然阻塞机械臂**：pylibfranka.Gripper.grasp()/move() 在 C++ 层（libfranka）就是同步阻塞的，Franka FCI 同一时间只允许一个活跃控制连接。即使 GripperServer 用 worker 线程隔离，机械臂控制仍被挂起直到夹爪完成（grasp ~1-2s，move ~0.5s）。架构层面无法规避，这是 Franka 硬件限制。
 - 算法机和控制机共用一个代码仓库
+- **运动学模块写死 FR3 家族**：当前固定 fr3v2 + 法兰坐标系（fr3v2_link8），URDF/mesh 内置于 `kinematics/assets/`。真机报告的 `state["ee"]` 是法兰坐标系（不是 fr3v2_hand，两者差 45° Z 轴旋转）。IK 使用 Jacobian 伪逆迭代 + 关节限位 clamp，7-DOF 冗余导致解不唯一。URDF 来源：[frankarobotics/franka_description](https://github.com/frankarobotics/franka_description)
 
 ## 参考库
 
@@ -227,6 +271,7 @@ routes:
 
 所有 5 个 Phase 已完成：Gripper → Env → 遥操作/相机/数据采集 → 轨迹规划 → 双机 TCP 桥接。
 Trajectory 模块已重构（planner/executor/waypoints 三层分离）并通过真机验收（pick_place route）。
+**Kinematics 模块已完成**：IKSolver（Pinocchio）提供 FK/IK，内置 FR3v2 URDF，真机验证通过（FK 0mm 误差，IK 全构型收敛）。
 已知 BUG 已修复（夹爪 binary 模式重复 grasp、keyboard exit_requested 不重置、input() Enter 残留）。
 Scripts 已从独立目录移入 `franka_control/scripts/`。
 

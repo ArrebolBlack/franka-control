@@ -45,6 +45,11 @@ franka_control/
 │   └── __main__.py          # python -m franka_control.gripper
 ├── envs/
 │   └── franka_env.py        # Gymnasium 环境
+├── kinematics/              # FK/IK 求解器（Pinocchio）
+│   ├── ik_solver.py         # IKSolver 类
+│   ├── assets/              # FR3v2 URDF + mesh 文件
+│   ├── verify_fk.py         # FK 验证脚本
+│   └── verify_ik.py         # IK 验证脚本
 ├── teleop/
 │   ├── spacemouse_teleop.py # SpaceMouse 遥操作
 │   └── keyboard_teleop.py  # 键盘遥操作
@@ -71,6 +76,9 @@ pip install numpy scipy gymnasium pyyaml pyzmq msgpack
 
 # 轨迹规划
 pip install toppra
+
+# 运动学（FK/IK）
+pip install pin  # 注意：不是 pinocchio 包
 
 # 遥操作 (需要 SpaceMouse)
 sudo apt install libhidapi-hidraw0 libhidapi-libusb0
@@ -272,6 +280,36 @@ planner = TrajectoryPlanner()  # 默认 80% 的 aiofranka 参数
 
 # 在真机上执行完整 route（time_scale 减速）
 execute_route(env, store, "pick_place", planner, time_scale=3.0)
+```
+
+### 运动学（FK/IK）
+
+```python
+from franka_control.kinematics import IKSolver
+import numpy as np
+
+# 默认加载 FR3v2 + 法兰坐标系
+solver = IKSolver()
+
+# 正运动学：关节角 → 末端位姿
+q = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785])
+T = solver.fk(q)  # 4x4 齐次变换矩阵
+print(f"Position: {T[:3, 3]}")
+
+# 逆运动学：末端位姿 → 关节角
+q_init = q  # 初值
+q_solution, converged = solver.ik(q_init, T)
+if converged:
+    print(f"IK solution: {q_solution}")
+```
+
+**验证脚本：**
+```bash
+# FK 验证（对比真机状态）
+python -m franka_control.kinematics.verify_fk --robot-ip <控制机IP>
+
+# IK 验证（多构型收敛性测试）
+python -m franka_control.kinematics.verify_ik --robot-ip <控制机IP>
 ```
 
 ## Waypoint YAML 格式
