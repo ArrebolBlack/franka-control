@@ -303,7 +303,7 @@ class RobotServer:
         Cycle:
           1. Process all pending commands from queue
           2. Check if blocking helper finished
-          3. Poll state if idle
+          3. Poll state whenever connected (even during busy)
         """
         state_push = self._ctx.socket(zmq.PUSH)
         state_push.setsockopt(zmq.SNDHWM, 2)
@@ -342,8 +342,9 @@ class RobotServer:
                         self._blocking_thread = None
                         self._busy = False
 
-                # 4. Poll state when idle and push the latest cache.
-                if self._controller is not None and not self._busy:
+                # 4. Poll state and push the latest cache.
+                # Safe during blocking move: controller.state only reads aiofranka shared memory.
+                if self._controller is not None and self._connected:
                     self._poll_state()
                     with self._state_lock:
                         state_dict = self._cached_state.to_dict()
@@ -352,6 +353,9 @@ class RobotServer:
                         state_push.send(packed, zmq.NOBLOCK)
                     except zmq.Again:
                         pass
+                    except zmq.ZMQError as e:
+                        if self._running:
+                            logger.warning("State stream send failed: %s", e)
         finally:
             state_push.close()
             self._destroy_controller()

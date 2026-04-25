@@ -248,10 +248,14 @@ class FrankaEnv(gym.Env):
 
         Returns:
             (observation, reward, terminated, truncated, info)
+            info contains "applied_action": the action after clipping.
         """
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        action = np.asarray(action, dtype=np.float32)
+        applied_action = np.clip(
+            action, self.action_space.low, self.action_space.high
+        ).copy()
 
-        robot_action, gripper_action = self._split_action(action)
+        robot_action, gripper_action = self._split_action(applied_action)
         target = self._compute_robot_target(robot_action)
         target = self._clip_robot_target(target)
         self._send_robot_target(target)
@@ -260,7 +264,9 @@ class FrankaEnv(gym.Env):
             self._apply_gripper_action(gripper_action)
 
         self._refresh_state()
-        return self._build_observation(), 0.0, False, False, {}
+        return self._build_observation(), 0.0, False, False, {
+            "applied_action": applied_action,
+        }
 
     def get_observation(self) -> dict:
         """Read current observation (refreshes state from robot)."""

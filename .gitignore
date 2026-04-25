@@ -29,11 +29,13 @@ Thumbs.db
 # Config with potential secrets
 config/waypoints.yaml
 
-# Data
+# Data (collected datasets, not source code)
 data/
+!franka_control/data/
 
-# Temporary test scripts
-test_*.py
+# Temporary test scripts (root level only)
+/test_*.py
+!tests/test_*.py
 
 # Algorithm docs (work in progress)
 docs/com_estimation_algorithm.md
