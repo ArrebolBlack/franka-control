@@ -29,27 +29,65 @@ logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description="Collect robot demonstration data")
+
+    # ── Dataset ──────────────────────────────────────────────────
     parser.add_argument("--robot-ip", required=True, help="Control machine IP")
     parser.add_argument("--repo-id", required=True, help="Dataset repo ID")
     parser.add_argument("--root", required=True, help="Local dataset directory")
     parser.add_argument("--task-name", default="manipulation", help="Task name")
+
+    # ── Control ──────────────────────────────────────────────────
     parser.add_argument(
         "--control-mode",
         default="ee_delta",
         choices=["joint_abs", "joint_delta", "ee_abs", "ee_delta"],
         help="Robot control mode",
     )
+    parser.add_argument("--fps", type=int, default=60, help="Recording frequency")
+    parser.add_argument("--num-episodes", type=int, default=10, help="Number of episodes")
+    parser.add_argument("--save-failure", action="store_true", help="Save failed episodes")
+
+    # ── Teleop device ────────────────────────────────────────────
     parser.add_argument(
         "--device",
         default="spacemouse",
         choices=["spacemouse", "keyboard"],
         help="Teleop device",
     )
-    parser.add_argument("--fps", type=int, default=60, help="Recording frequency")
-    parser.add_argument("--num-episodes", type=int, default=10, help="Number of episodes")
-    parser.add_argument("--save-failure", action="store_true", help="Save failed episodes")
+    parser.add_argument(
+        "--action-scale-trans",
+        type=float,
+        default=2.0,
+        help="Translation action scale [m/s] (default: 2.0)",
+    )
+    parser.add_argument(
+        "--action-scale-rot",
+        type=float,
+        default=5.0,
+        help="Rotation action scale [rad/s] (default: 5.0)",
+    )
+    parser.add_argument(
+        "--freeze-rotation",
+        action="store_true",
+        help="Ignore rotation input (3-DOF translation only)",
+    )
+    parser.add_argument(
+        "--gripper-mode",
+        default="binary",
+        choices=["binary", "continuous", "none"],
+        help="Gripper control mode (default: binary)",
+    )
+
+    # ── SpaceMouse-specific ──────────────────────────────────────
+    parser.add_argument(
+        "--deadzone",
+        type=float,
+        default=0.001,
+        help="SpaceMouse deadzone (default: 0.001)",
+    )
+
+    # ── Camera ───────────────────────────────────────────────────
     parser.add_argument("--no-camera", action="store_true", help="Disable cameras")
-    parser.add_argument("--resume", action="store_true", help="Resume existing dataset")
     parser.add_argument(
         "--camera-serials",
         nargs="+",
@@ -62,10 +100,14 @@ def main():
         default=["wrist", "third_person"],
         help="Camera names (space-separated, must match --camera-serials length)",
     )
+
+    # ── Other ────────────────────────────────────────────────────
+    parser.add_argument("--resume", action="store_true", help="Resume existing dataset")
+
     args = parser.parse_args()
 
     # Validate camera config
-    if len(args.camera_serials) != len(args.camera_names):
+    if not args.no_camera and len(args.camera_serials) != len(args.camera_names):
         parser.error("--camera-serials and --camera-names must have same length")
 
     # Configuration
@@ -76,6 +118,8 @@ def main():
         for name, serial in zip(args.camera_names, args.camera_serials)
     ]
 
+    gripper_mode = None if args.gripper_mode == "none" else args.gripper_mode
+
     config = CollectionConfig(
         repo_id=args.repo_id,
         root=Path(args.root),
@@ -83,7 +127,7 @@ def main():
         robot_ip=args.robot_ip,
         gripper_host=args.robot_ip,
         control_mode=args.control_mode,
-        gripper_mode="binary",
+        gripper_mode=gripper_mode or "binary",
         fps=args.fps,
         cameras=cameras_list,
         save_failure=args.save_failure,
@@ -113,14 +157,31 @@ def main():
         cameras = None
         logger.info("Cameras disabled (--no-camera)")
 
+    # Teleop
+    action_scale = (args.action_scale_trans, args.action_scale_rot)
     teleop_cls = SpaceMouseTeleop if args.device == "spacemouse" else KeyboardTeleop
-    teleop = teleop_cls(
-        action_scale=(2.0, 5.0),
-        gripper_mode="binary",
-    )
+
+    teleop_kwargs = {
+        "action_scale": action_scale,
+        "freeze_rotation": args.freeze_rotation,
+        "gripper_mode": gripper_mode,
+    }
+    if args.device == "spacemouse":
+        teleop_kwargs["deadzone"] = args.deadzone
+
+    teleop = teleop_cls(**teleop_kwargs)
 
     # Create collector
     collector = DataCollector(config, resume=args.resume)
+
+    # Log configuration
+    logger.info(
+        "Config: mode=%s, device=%s, fps=%d, gripper=%s, cameras=%s, "
+        "action_scale=(%.1f, %.1f), freeze_rotation=%s",
+        args.control_mode, args.device, args.fps, args.gripper_mode,
+        "off" if cameras is None else f"{len(config.cameras)}x",
+        action_scale[0], action_scale[1], args.freeze_rotation,
+    )
 
     # Graceful shutdown
     running = True
@@ -208,4 +269,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
