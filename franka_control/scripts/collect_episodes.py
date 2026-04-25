@@ -55,16 +55,16 @@ def main():
         help="Teleop device",
     )
     parser.add_argument(
-        "--action-scale-trans",
+        "--action-scale-t",
         type=float,
         default=2.0,
-        help="Translation action scale [m/s] (default: 2.0)",
+        help="Translation max speed [m/s] (default: 2.0)",
     )
     parser.add_argument(
-        "--action-scale-rot",
+        "--action-scale-r",
         type=float,
         default=5.0,
-        help="Rotation action scale [rad/s] (default: 5.0)",
+        help="Rotation max speed [rad/s] (default: 5.0)",
     )
     parser.add_argument(
         "--freeze-rotation",
@@ -158,7 +158,7 @@ def main():
         logger.info("Cameras disabled (--no-camera)")
 
     # Teleop
-    action_scale = (args.action_scale_trans, args.action_scale_rot)
+    action_scale = (args.action_scale_t, args.action_scale_r)
     teleop_cls = SpaceMouseTeleop if args.device == "spacemouse" else KeyboardTeleop
 
     teleop_kwargs = {
