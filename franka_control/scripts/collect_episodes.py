@@ -238,6 +238,10 @@ def main():
 
             env.reset()
             recording = False
+            record_start_time = 0.0
+            record_count = 0
+            sec_frames = 0
+            sec_t0 = time.perf_counter()
 
             if args.device == "keyboard":
                 logger.info("Preview mode — move robot to start position. Controls:")
@@ -254,6 +258,12 @@ def main():
 
                 if info.get("exit_requested"):
                     if recording:
+                        duration = time.perf_counter() - record_start_time
+                        avg_fps = record_count / max(duration, 0.001)
+                        logger.info(
+                            "Episode stats: %d frames, %.1fs, avg %.1f fps",
+                            record_count, duration, avg_fps,
+                        )
                         success = _wait_success(teleop)
                         collector.end_episode(success=success)
                     else:
@@ -266,6 +276,10 @@ def main():
                     buttons = info.get("buttons", [0, 0])
                     if "s" in pressed or buttons[0]:
                         recording = True
+                        record_start_time = time.perf_counter()
+                        record_count = 0
+                        sec_frames = 0
+                        sec_t0 = time.perf_counter()
                         collector.start_episode(instruction=args.task_name)
                         logger.info(">>> Recording started <<<")
                         teleop.clear_pressed_keys()
@@ -311,6 +325,15 @@ def main():
                 _, _, _, _, step_info = env.step(raw_action)
                 applied_action = step_info["applied_action"]
                 collector.record_frame(obs, applied_action, images)
+                record_count += 1
+                sec_frames += 1
+
+                # Per-second FPS report
+                now = time.perf_counter()
+                if now - sec_t0 >= 1.0:
+                    logger.info("[1s] %d fps | total frames=%d", sec_frames, record_count)
+                    sec_frames = 0
+                    sec_t0 = now
 
                 # Rate limiting
                 elapsed = time.perf_counter() - loop_start
