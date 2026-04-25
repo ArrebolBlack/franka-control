@@ -27,6 +27,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _keyboard_help() -> str:
+    return (
+        "  W/S: +/-X, A/D: +/-Y, R/F: +/-Z\n"
+        "  Q/E: +/-Yaw, Z/X: +/-Pitch, C/V: +/-Roll\n"
+        "  Space: close gripper, Enter: open gripper\n"
+        "  Shift: slow mode (0.25x)\n"
+        "  Esc: end episode, then Y=success / N=failure"
+    )
+
+
+def _wait_success(teleop, timeout: float = 300.0) -> bool:
+    """Wait for Y (success) or N (failure) key press via teleop.
+
+    Returns True for success, False for failure.
+    """
+    logger.info("  Press Y=success / N=failure")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        action, info = teleop.get_action()
+        pressed = info.get("pressed_keys", [])
+        # Check for y/n key press
+        for key in pressed:
+            key_str = str(key)
+            if key_str in ("'y'", "Key.y"):
+                return True
+            if key_str in ("'n'", "Key.n"):
+                return False
+        time.sleep(0.01)
+    logger.warning("Timeout waiting for success/failure, defaulting to failure")
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Collect robot demonstration data")
 
@@ -34,7 +66,7 @@ def main():
     parser.add_argument("--robot-ip", required=True, help="Control machine IP")
     parser.add_argument("--repo-id", required=True, help="Dataset repo ID")
     parser.add_argument("--root", required=True, help="Local dataset directory")
-    parser.add_argument("--task-name", default="manipulation", help="Task name")
+    parser.add_argument("--task-name", default="manipulation", help="Task name / instruction")
 
     # ── Control ──────────────────────────────────────────────────
     parser.add_argument(
@@ -203,13 +235,18 @@ def main():
             if not running:
                 break
 
-            instruction = input(
-                f"\nEpisode {ep_idx + 1}/{args.num_episodes} - Task instruction: "
-            )
-            env.reset()
-            collector.start_episode(instruction=instruction)
+            logger.info("=" * 50)
+            logger.info("Episode %d/%d — instruction: %s", ep_idx + 1, args.num_episodes, args.task_name)
 
-            logger.info("Recording... ESC/Ctrl+C to end episode.")
+            env.reset()
+            collector.start_episode(instruction=args.task_name)
+
+            if args.device == "keyboard":
+                logger.info("Recording... Controls:")
+                for line in _keyboard_help().split("\n"):
+                    logger.info(line)
+            else:
+                logger.info("Recording... Use SpaceMouse to control. Esc/Ctrl+C to end episode.")
 
             while running:
                 loop_start = time.perf_counter()
@@ -236,7 +273,7 @@ def main():
                 # Get teleop action
                 raw_action, info = teleop.get_action()
                 if info.get("exit_requested"):
-                    success = input("Episode successful? (y/n): ").lower() == "y"
+                    success = _wait_success(teleop)
                     collector.end_episode(success=success)
                     break
 
