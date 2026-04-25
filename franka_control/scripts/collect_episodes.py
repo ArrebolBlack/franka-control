@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 from franka_control.cameras import CameraManager
-from franka_control.data import CameraConfig, CollectionConfig, DataCollector
+from franka_control.data import CameraConfig, CollectionConfig, DataCollector, StateStreamRecorder
 from franka_control.envs import FrankaEnv
 from franka_control.teleop import KeyboardTeleop, SpaceMouseTeleop
 
@@ -55,6 +55,20 @@ def _wait_success(teleop, timeout: float = 300.0) -> bool:
         time.sleep(0.01)
     logger.warning("Timeout waiting for success/failure, defaulting to failure")
     return False
+
+
+def _read_cameras(cameras, config, last_images: dict) -> bool:
+    """Read camera frames into last_images. Returns False on failure."""
+    if cameras is None:
+        return True
+    raw_images = cameras.read()
+    for cam in config.cameras:
+        cam_data = raw_images.get(cam.name, {})
+        if "rgb" not in cam_data:
+            logger.warning("Camera '%s' missing frame", cam.name)
+            return False
+        last_images[cam.name] = cam_data["rgb"]
+    return True
 
 
 def main():
@@ -201,8 +215,9 @@ def main():
 
     teleop = teleop_cls(**teleop_kwargs)
 
-    # Create collector
+    # Create collector and state recorder
     collector = DataCollector(config, resume=args.resume)
+    recorder = StateStreamRecorder(lambda: env._robot, fps=config.fps)
 
     # Log configuration
     logger.info(
@@ -242,6 +257,8 @@ def main():
             record_count = 0
             sec_frames = 0
             sec_t0 = time.perf_counter()
+            last_images = {}
+            last_applied_action = None
 
             if args.device == "keyboard":
                 logger.info("Preview mode — move robot to start position. Controls:")
@@ -258,14 +275,8 @@ def main():
 
                 if info.get("exit_requested"):
                     if recording:
-                        duration = time.perf_counter() - record_start_time
-                        avg_fps = record_count / max(duration, 0.001)
-                        logger.info(
-                            "Episode stats: %d frames, %.1fs, avg %.1f fps",
-                            record_count, duration, avg_fps,
-                        )
-                        success = _wait_success(teleop)
-                        collector.end_episode(success=success)
+                        _end_recording(recorder, collector, last_applied_action,
+                                       last_images, record_count, record_start_time, teleop)
                     else:
                         logger.info("Episode skipped.")
                     break
@@ -280,6 +291,10 @@ def main():
                         record_count = 0
                         sec_frames = 0
                         sec_t0 = time.perf_counter()
+                        # Start background state recorder
+                        init_obs = env.get_observation()
+                        recorder.gripper_width = init_obs["gripper_width"][0]
+                        recorder.start()
                         collector.start_episode(instruction=args.task_name)
                         logger.info(">>> Recording started <<<")
                         teleop.clear_pressed_keys()
@@ -296,24 +311,11 @@ def main():
                         time.sleep(dt - elapsed)
                     continue
 
-                # ── Phase 2: Recording ─────────────────────────────
-                obs = env.get_observation()
-
-                images = {}
-                if cameras is not None:
-                    raw_images = cameras.read()
-                    frame_ok = True
-                    for cam in config.cameras:
-                        cam_data = raw_images.get(cam.name, {})
-                        if "rgb" not in cam_data:
-                            logger.warning("Camera '%s' missing frame", cam.name)
-                            frame_ok = False
-                            break
-                        images[cam.name] = cam_data["rgb"]
-
-                    if not frame_ok:
-                        collector.discard_episode()
-                        break
+                # ── Phase 2: Recording (dual-thread) ───────────────
+                if not _read_cameras(cameras, config, last_images):
+                    recorder.stop()
+                    collector.discard_episode()
+                    break
 
                 # Scale velocity to delta for delta modes
                 if config.control_mode == "ee_delta":
@@ -321,17 +323,32 @@ def main():
                 elif config.control_mode == "joint_delta":
                     raw_action[:7] *= dt
 
-                # Execute and record
-                _, _, _, _, step_info = env.step(raw_action)
+                # Execute action (may block on gripper)
+                obs_after, _, _, _, step_info = env.step(raw_action)
                 applied_action = step_info["applied_action"]
-                collector.record_frame(obs, applied_action, images)
-                record_count += 1
-                sec_frames += 1
+                recorder.gripper_width = obs_after["gripper_width"][0]
+                last_applied_action = applied_action
+
+                # Drain accumulated frames from background thread
+                drained = recorder.drain()
+                for frame_obs in drained:
+                    collector.record_frame(frame_obs, applied_action, last_images)
+                    record_count += 1
+                    sec_frames += 1
+
+                # If no frames accumulated (fast step), record one from result
+                if not drained:
+                    collector.record_frame(obs_after, applied_action, last_images)
+                    record_count += 1
+                    sec_frames += 1
 
                 # Per-second FPS report
                 now = time.perf_counter()
                 if now - sec_t0 >= 1.0:
-                    logger.info("[1s] %d fps | total frames=%d", sec_frames, record_count)
+                    logger.info(
+                        "[1s] %d fps | total frames=%d",
+                        sec_frames, record_count,
+                    )
                     sec_frames = 0
                     sec_t0 = now
 
@@ -339,6 +356,9 @@ def main():
                 elapsed = time.perf_counter() - loop_start
                 if elapsed < dt:
                     time.sleep(dt - elapsed)
+
+            # Stop recorder after episode ends
+            recorder.stop()
 
         logger.info("Collection complete. Finalizing dataset...")
         collector.finalize()
@@ -351,5 +371,30 @@ def main():
         logger.info("Collection session ended.")
 
 
+def _end_recording(recorder, collector, last_applied_action, last_images,
+                   record_count, record_start_time, teleop) -> int:
+    """Stop recorder, drain remaining frames, end episode.
+
+    Returns total frame count including drained frames.
+    """
+    recorder.stop()
+    extra = 0
+    if last_applied_action is not None:
+        for frame_obs in recorder.drain():
+            collector.record_frame(frame_obs, last_applied_action, last_images)
+            extra += 1
+    total = record_count + extra
+    duration = time.perf_counter() - record_start_time
+    avg_fps = total / max(duration, 0.001)
+    logger.info(
+        "Episode stats: %d frames, %.1fs, avg %.1f fps",
+        total, duration, avg_fps,
+    )
+    success = _wait_success(teleop)
+    collector.end_episode(success=success)
+    return total
+
+
 if __name__ == "__main__":
     main()
+
