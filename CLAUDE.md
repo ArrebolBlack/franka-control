@@ -24,21 +24,27 @@ Franka Research 3 机械臂控制库。双机架构：算法机（GPU, Python）
 ### 安装依赖
 
 ```bash
-# 算法机（基础依赖）
-pip install numpy scipy gymnasium pyyaml pyzmq msgpack
+# 环境要求：Python >=3.12，CUDA（推荐）
+conda create -n franka python=3.12 -y
+conda activate franka
 
-# 按需安装
-pip install toppra          # 轨迹规划
-pip install pin             # 运动学（FK/IK），注意：不是 pinocchio 包
-pip install pyspacemouse    # 遥操作
-pip install pyrealsense2    # 相机
-pip install lerobot         # 数据采集
+# 一键安装所有依赖
+pip install -e .
 
-# 控制机专用（需要 Franka FCI）
-pip install pylibfranka aiofranka
+# 控制机额外依赖（需要 Franka FCI 硬件）
+pip install -e ".[control-machine]"
+
+# 开发工具
+pip install -e ".[dev]"
 ```
 
-有 `pyproject.toml`（setuptools backend），可用 `pip install -e .` 安装。
+或使用 requirements.txt：
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+
+**关键依赖版本**：lerobot >=0.5.0（需要 Python >=3.12），torch >=2.0（支持 CUDA），pin（注意：不是 pinocchio 包）。
 
 ### 运行测试
 

@@ -1,0 +1,32 @@
+# Core dependencies
+numpy
+scipy
+gymnasium
+pyyaml
+pyzmq
+msgpack
+
+# PyTorch (for lerobot, ultralytics)
+torch
+torchvision
+
+# Data collection (requires Python >=3.12)
+lerobot>=0.5.0
+
+# Teleoperation
+pyspacemouse
+pynput
+
+# Cameras
+pyrealsense2
+opencv-python
+
+# Kinematics
+pin
+
+# Trajectory planning
+toppra
+
+# Control machine only (requires Franka FCI)
+# pylibfranka
+# aiofranka

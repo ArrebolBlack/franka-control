@@ -6,7 +6,38 @@ build-backend = "setuptools.build_meta"
 name = "franka-control"
 version = "0.1.0"
 description = "Franka Research 3 robot control library"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "scipy",
+    "gymnasium",
+    "pyyaml",
+    "pyzmq",
+    "msgpack",
+    "torch",
+    "torchvision",
+    "lerobot>=0.5.0",
+    "pyrealsense2",
+    "opencv-python",
+    "pyspacemouse",
+    "pynput",
+    "pin",
+    "toppra",
+]
+
+[project.optional-dependencies]
+# Control machine only (requires Franka FCI hardware)
+control-machine = [
+    "pylibfranka",
+    "aiofranka",
+]
+dev = [
+    "pytest",
+    "ruff",
+]
 
 [tool.setuptools.packages.find]
 include = ["franka_control*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
