@@ -47,12 +47,10 @@ def _wait_success(teleop, timeout: float = 300.0) -> bool:
     while time.monotonic() < deadline:
         action, info = teleop.get_action()
         pressed = info.get("pressed_keys", [])
-        # Check for y/n key press
         for key in pressed:
-            key_str = str(key)
-            if key_str in ("'y'", "Key.y"):
+            if key in ("y",):
                 return True
-            if key_str in ("'n'", "Key.n"):
+            if key in ("n",):
                 return False
         time.sleep(0.01)
     logger.warning("Timeout waiting for success/failure, defaulting to failure")
