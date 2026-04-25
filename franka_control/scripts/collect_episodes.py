@@ -48,6 +48,7 @@ def main():
     parser.add_argument("--fps", type=int, default=60, help="Recording frequency")
     parser.add_argument("--num-episodes", type=int, default=10, help="Number of episodes")
     parser.add_argument("--save-failure", action="store_true", help="Save failed episodes")
+    parser.add_argument("--no-camera", action="store_true", help="Disable cameras")
     parser.add_argument("--resume", action="store_true", help="Resume existing dataset")
     parser.add_argument(
         "--camera-serials",
@@ -68,6 +69,13 @@ def main():
         parser.error("--camera-serials and --camera-names must have same length")
 
     # Configuration
+    cameras_list = [] if args.no_camera else [
+        CameraConfig(
+            name=name, serial=serial, width=640, height=480, fps=60
+        )
+        for name, serial in zip(args.camera_names, args.camera_serials)
+    ]
+
     config = CollectionConfig(
         repo_id=args.repo_id,
         root=Path(args.root),
@@ -77,12 +85,7 @@ def main():
         control_mode=args.control_mode,
         gripper_mode="binary",
         fps=args.fps,
-        cameras=[
-            CameraConfig(
-                name=name, serial=serial, width=640, height=480, fps=60
-            )
-            for name, serial in zip(args.camera_names, args.camera_serials)
-        ],
+        cameras=cameras_list,
         save_failure=args.save_failure,
     )
 
@@ -95,15 +98,20 @@ def main():
         gripper_mode=config.gripper_mode,
     )
 
-    camera_config = {
-        cam.name: {
-            "serial": cam.serial,
-            "resolution": (cam.width, cam.height),
-            "fps": cam.fps,
+    # Cameras
+    if config.cameras:
+        camera_config = {
+            cam.name: {
+                "serial": cam.serial,
+                "resolution": (cam.width, cam.height),
+                "fps": cam.fps,
+            }
+            for cam in config.cameras
         }
-        for cam in config.cameras
-    }
-    cameras = CameraManager(camera_config)
+        cameras = CameraManager(camera_config)
+    else:
+        cameras = None
+        logger.info("Cameras disabled (--no-camera)")
 
     teleop_cls = SpaceMouseTeleop if args.device == "spacemouse" else KeyboardTeleop
     teleop = teleop_cls(
@@ -147,22 +155,22 @@ def main():
 
                 # Get observation and images
                 obs = env.get_observation()
-                raw_images = cameras.read()
 
-                # Check for missing frames
                 images = {}
-                frame_ok = True
-                for cam in config.cameras:
-                    cam_data = raw_images.get(cam.name, {})
-                    if "rgb" not in cam_data:
-                        logger.warning("Camera '%s' missing frame", cam.name)
-                        frame_ok = False
-                        break
-                    images[cam.name] = cam_data["rgb"]
+                if cameras is not None:
+                    raw_images = cameras.read()
+                    frame_ok = True
+                    for cam in config.cameras:
+                        cam_data = raw_images.get(cam.name, {})
+                        if "rgb" not in cam_data:
+                            logger.warning("Camera '%s' missing frame", cam.name)
+                            frame_ok = False
+                            break
+                        images[cam.name] = cam_data["rgb"]
 
-                if not frame_ok:
-                    collector.discard_episode()
-                    break
+                    if not frame_ok:
+                        collector.discard_episode()
+                        break
 
                 # Get teleop action
                 raw_action, info = teleop.get_action()
@@ -192,7 +200,8 @@ def main():
 
     finally:
         teleop.close()
-        cameras.close()
+        if cameras is not None:
+            cameras.close()
         env.close()
         logger.info("Collection session ended.")
 

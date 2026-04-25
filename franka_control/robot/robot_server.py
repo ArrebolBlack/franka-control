@@ -310,9 +310,7 @@ class RobotServer:
         state_push.bind(f"tcp://*:{self._state_stream_port}")
 
         try:
-            loop_count = 0
             while self._running:
-                loop_start = time.monotonic()
                 self._cmd_event.wait(timeout=self._state_interval)
                 self._cmd_event.clear()
 
@@ -345,27 +343,19 @@ class RobotServer:
                         self._busy = False
 
                 # 4. Poll state and push the latest cache.
+                # Safe during blocking move: controller.state only reads aiofranka shared memory.
                 if self._controller is not None and self._connected:
                     self._poll_state()
                     with self._state_lock:
                         state_dict = self._cached_state.to_dict()
-                        current_ts = self._cached_state.timestamp
                     try:
                         packed = msgpack.packb(state_dict, use_bin_type=True)
                         state_push.send(packed, zmq.NOBLOCK)
                     except zmq.Again:
-                        logger.warning("State push dropped (HWM full), ts=%.4f", current_ts)
+                        pass
                     except zmq.ZMQError as e:
                         if self._running:
                             logger.warning("State stream send failed: %s", e)
-
-                # Diagnostic logging
-                loop_count += 1
-                loop_elapsed = time.monotonic() - loop_start
-                if loop_elapsed > 0.01:
-                    logger.warning("Controller loop took %.1f ms (busy=%s)", loop_elapsed * 1000, self._busy)
-                if loop_count % 1000 == 0:
-                    logger.debug("Controller loop alive: %d iterations, ts=%.4f", loop_count, current_ts if self._connected else -1)
         finally:
             state_push.close()
             self._destroy_controller()
@@ -610,11 +600,7 @@ class RobotServer:
     def _poll_state(self) -> None:
         """Read controller.state and update cache. Controller thread only."""
         try:
-            t0 = time.monotonic()
             state = self._controller.state
-            elapsed = time.monotonic() - t0
-            if elapsed > 0.01:  # >10ms is suspicious
-                logger.warning("State poll blocked for %.1f ms (busy=%s)", elapsed * 1000, self._busy)
             if state is not None:
                 with self._state_lock:
                     self._cached_state.update(state)
