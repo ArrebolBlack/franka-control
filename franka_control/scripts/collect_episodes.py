@@ -253,7 +253,11 @@ def main():
                 raw_action, info = teleop.get_action()
 
                 if info.get("exit_requested"):
-                    logger.info("Episode skipped.")
+                    if recording:
+                        success = _wait_success(teleop)
+                        collector.end_episode(success=success)
+                    else:
+                        logger.info("Episode skipped.")
                     break
 
                 # Check for start trigger: keyboard 's' or spacemouse left button
@@ -265,7 +269,6 @@ def main():
                         collector.start_episode(instruction=args.task_name)
                         logger.info(">>> Recording started <<<")
                         teleop.clear_pressed_keys()
-                        # fall through to execute action below
 
                 if not recording:
                     # Preview: execute action but don't record
@@ -297,12 +300,6 @@ def main():
                     if not frame_ok:
                         collector.discard_episode()
                         break
-
-                # Re-check exit after recording started
-                if info.get("exit_requested"):
-                    success = _wait_success(teleop)
-                    collector.end_episode(success=success)
-                    break
 
                 # Scale velocity to delta for delta modes
                 if config.control_mode == "ee_delta":
