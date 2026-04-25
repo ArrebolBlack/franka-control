@@ -33,7 +33,7 @@ def _keyboard_help() -> str:
         "  Q/E: +/-Yaw, Z/X: +/-Pitch, C/V: +/-Roll\n"
         "  Space: close gripper, Enter: open gripper\n"
         "  Shift: slow mode (0.25x)\n"
-        "  Esc: end episode, then Y=success / N=failure"
+        "  S: start recording, Esc: end episode"
     )
 
 
@@ -237,19 +237,49 @@ def main():
             logger.info("Episode %d/%d — instruction: %s", ep_idx + 1, args.num_episodes, args.task_name)
 
             env.reset()
-            collector.start_episode(instruction=args.task_name)
+            recording = False
 
             if args.device == "keyboard":
-                logger.info("Recording... Controls:")
+                logger.info("Preview mode — move robot to start position. Controls:")
                 for line in _keyboard_help().split("\n"):
                     logger.info(line)
             else:
-                logger.info("Recording... Use SpaceMouse to control. Esc/Ctrl+C to end episode.")
+                logger.info("Preview mode — move robot to start position.")
+                logger.info("  SpaceMouse left button = start recording, Esc = skip episode.")
 
+            # ── Phase 1: Preview (move without recording) ──────────
             while running:
                 loop_start = time.perf_counter()
+                raw_action, info = teleop.get_action()
 
-                # Get observation and images
+                if info.get("exit_requested"):
+                    logger.info("Episode skipped.")
+                    break
+
+                # Check for start trigger: keyboard 's' or spacemouse left button
+                if not recording:
+                    pressed = info.get("pressed_keys", [])
+                    buttons = info.get("buttons", [0, 0])
+                    if "s" in pressed or buttons[0]:
+                        recording = True
+                        collector.start_episode(instruction=args.task_name)
+                        logger.info(">>> Recording started <<<")
+                        teleop.clear_pressed_keys()
+                        # fall through to execute action below
+
+                if not recording:
+                    # Preview: execute action but don't record
+                    if config.control_mode == "ee_delta":
+                        raw_action[:6] *= dt
+                    elif config.control_mode == "joint_delta":
+                        raw_action[:7] *= dt
+                    env.step(raw_action)
+                    elapsed = time.perf_counter() - loop_start
+                    if elapsed < dt:
+                        time.sleep(dt - elapsed)
+                    continue
+
+                # ── Phase 2: Recording ─────────────────────────────
                 obs = env.get_observation()
 
                 images = {}
@@ -268,8 +298,7 @@ def main():
                         collector.discard_episode()
                         break
 
-                # Get teleop action
-                raw_action, info = teleop.get_action()
+                # Re-check exit after recording started
                 if info.get("exit_requested"):
                     success = _wait_success(teleop)
                     collector.end_episode(success=success)
