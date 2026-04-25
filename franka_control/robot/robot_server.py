@@ -345,27 +345,27 @@ class RobotServer:
                         self._busy = False
 
                 # 4. Poll state and push the latest cache.
-                # Safe during blocking move: controller.state only reads aiofranka shared memory.
                 if self._controller is not None and self._connected:
                     self._poll_state()
                     with self._state_lock:
                         state_dict = self._cached_state.to_dict()
+                        current_ts = self._cached_state.timestamp
                     try:
                         packed = msgpack.packb(state_dict, use_bin_type=True)
                         state_push.send(packed, zmq.NOBLOCK)
                     except zmq.Again:
-                        pass
+                        logger.warning("State push dropped (HWM full), ts=%.4f", current_ts)
                     except zmq.ZMQError as e:
                         if self._running:
                             logger.warning("State stream send failed: %s", e)
 
-                # Log slow loops
-                loop_elapsed = time.monotonic() - loop_start
-                if loop_elapsed > 0.01:  # >10ms
-                    logger.warning("Controller loop took %.1f ms (busy=%s)", loop_elapsed * 1000, self._busy)
+                # Diagnostic logging
                 loop_count += 1
+                loop_elapsed = time.monotonic() - loop_start
+                if loop_elapsed > 0.01:
+                    logger.warning("Controller loop took %.1f ms (busy=%s)", loop_elapsed * 1000, self._busy)
                 if loop_count % 1000 == 0:
-                    logger.debug("Controller loop alive: %d iterations", loop_count)
+                    logger.debug("Controller loop alive: %d iterations, ts=%.4f", loop_count, current_ts if self._connected else -1)
         finally:
             state_push.close()
             self._destroy_controller()
