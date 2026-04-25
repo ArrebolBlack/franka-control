@@ -310,7 +310,9 @@ class RobotServer:
         state_push.bind(f"tcp://*:{self._state_stream_port}")
 
         try:
+            loop_count = 0
             while self._running:
+                loop_start = time.monotonic()
                 self._cmd_event.wait(timeout=self._state_interval)
                 self._cmd_event.clear()
 
@@ -356,6 +358,14 @@ class RobotServer:
                     except zmq.ZMQError as e:
                         if self._running:
                             logger.warning("State stream send failed: %s", e)
+
+                # Log slow loops
+                loop_elapsed = time.monotonic() - loop_start
+                if loop_elapsed > 0.01:  # >10ms
+                    logger.warning("Controller loop took %.1f ms (busy=%s)", loop_elapsed * 1000, self._busy)
+                loop_count += 1
+                if loop_count % 1000 == 0:
+                    logger.debug("Controller loop alive: %d iterations", loop_count)
         finally:
             state_push.close()
             self._destroy_controller()
@@ -600,7 +610,11 @@ class RobotServer:
     def _poll_state(self) -> None:
         """Read controller.state and update cache. Controller thread only."""
         try:
+            t0 = time.monotonic()
             state = self._controller.state
+            elapsed = time.monotonic() - t0
+            if elapsed > 0.01:  # >10ms is suspicious
+                logger.warning("State poll blocked for %.1f ms (busy=%s)", elapsed * 1000, self._busy)
             if state is not None:
                 with self._state_lock:
                     self._cached_state.update(state)
