@@ -198,7 +198,7 @@ class CameraManager:
                     serial=cfg["serial"],
                     resolution=cfg.get("resolution", (640, 480)),
                     fps=cfg.get("fps", 60),
-                    depth=cfg.get("depth", False),
+                    depth=cfg.get("depth", cfg.get("enable_depth", False)),
                 )
             except Exception as e:
                 logger.error("Failed to init camera '%s': %s", name, e)

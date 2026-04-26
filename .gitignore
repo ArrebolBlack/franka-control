@@ -32,6 +32,8 @@ config/waypoints.yaml
 # Data (collected datasets, not source code)
 data/
 !franka_control/data/
+screenshots/
+videos/
 
 # Temporary test scripts (root level only)
 /test_*.py

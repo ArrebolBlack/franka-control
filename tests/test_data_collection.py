@@ -232,3 +232,89 @@ class TestDataCollector:
 
         collector.discard_episode()
         collector.finalize()
+
+    def test_extra_feature_recorded(self, tmp_path):
+        """Test that project-specific extra features are saved and reloadable."""
+        from lerobot.datasets import LeRobotDataset
+        from franka_control.data import DataCollector
+
+        config = CollectionConfig(
+            repo_id="test/franka_extra",
+            root=tmp_path / "dataset_extra",
+            task_name="test",
+            robot_ip="127.0.0.1",
+            gripper_host="127.0.0.1",
+            control_mode="joint_abs",
+            use_videos=False,
+            streaming_encoding=False,
+        )
+        phase_names = [
+            "POSITIONING", "WAITING", "GRASPING", "PLACING",
+            "IDLE", "TRACKING", "STARTUP",
+        ]
+        collector = DataCollector(
+            config,
+            extra_features={
+                "observation.phase": {
+                    "dtype": "int32",
+                    "shape": (len(phase_names),),
+                    "names": phase_names,
+                },
+            },
+        )
+        obs = self._make_obs()
+        phase = np.zeros(len(phase_names), dtype=np.int32)
+        phase[2] = 1
+
+        collector.start_episode("test")
+        collector.record_frame(
+            obs,
+            np.zeros(8, dtype=np.float32),
+            extra={"observation.phase": phase},
+        )
+        collector.end_episode(success=True)
+        collector.finalize()
+
+        dataset = LeRobotDataset("test/franka_extra", root=config.root)
+        assert int(dataset[0]["observation.phase"].argmax().item()) == 2
+
+    def test_resume_ignores_lerobot_default_features(self, tmp_path):
+        """Test resume validation ignores LeRobot auto-generated columns."""
+        from franka_control.data import DataCollector
+
+        config = CollectionConfig(
+            repo_id="test/franka_resume_extra",
+            root=tmp_path / "dataset_resume_extra",
+            task_name="test",
+            robot_ip="127.0.0.1",
+            gripper_host="127.0.0.1",
+            control_mode="joint_abs",
+            use_videos=False,
+            streaming_encoding=False,
+        )
+        phase_names = [
+            "POSITIONING", "WAITING", "GRASPING", "PLACING",
+            "IDLE", "TRACKING", "STARTUP",
+        ]
+        extra_features = {
+            "observation.phase": {
+                "dtype": "int32",
+                "shape": (len(phase_names),),
+                "names": phase_names,
+            },
+        }
+        collector = DataCollector(config, extra_features=extra_features)
+        obs = self._make_obs()
+        phase = np.zeros(len(phase_names), dtype=np.int32)
+        phase[1] = 1
+        collector.start_episode("test")
+        collector.record_frame(
+            obs,
+            np.zeros(8, dtype=np.float32),
+            extra={"observation.phase": phase},
+        )
+        collector.end_episode(success=True)
+        collector.finalize()
+
+        resumed = DataCollector(config, resume=True, extra_features=extra_features)
+        resumed.finalize()

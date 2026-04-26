@@ -559,7 +559,7 @@ def main():
 
                 # Drain accumulated (obs, images) from background thread
                 drained = recorder.drain()
-                for frame_obs, frame_images in drained:
+                for frame_obs, _, frame_images in drained:
                     images_to_use = frame_images if frame_images else last_images
                     collector.record_frame(frame_obs, applied_action, images_to_use)
                     if images_to_use:
@@ -624,7 +624,7 @@ def _end_recording(recorder, collector, last_applied_action, last_images,
     recorder.stop()
     extra = 0
     if last_applied_action is not None:
-        for frame_obs, frame_images in recorder.drain():
+        for frame_obs, _, frame_images in recorder.drain():
             images_to_use = frame_images if frame_images else last_images
             collector.record_frame(frame_obs, last_applied_action, images_to_use)
             extra += 1

@@ -4,6 +4,7 @@ import logging
 import queue
 import threading
 import time
+from collections.abc import Callable
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -42,14 +43,25 @@ class StateStreamRecorder:
         buffer_seconds: Queue capacity in seconds of frames.
     """
 
-    def __init__(self, robot_client_fn, cameras=None, fps: int = 60, buffer_seconds: float = 5.0):
+    def __init__(
+        self,
+        robot_client_fn,
+        cameras=None,
+        fps: int = 60,
+        buffer_seconds: float = 5.0,
+        action_fn: Callable[[dict], np.ndarray] | None = None,
+    ):
         self._get_robot = robot_client_fn
         self._get_cameras = cameras
         self._fps = fps
         self._dt = 1.0 / fps
-        self._queue: queue.Queue[tuple[dict, dict]] = queue.Queue(maxsize=int(fps * buffer_seconds))
+        self._queue: queue.Queue[tuple[dict, np.ndarray | None, dict]] = queue.Queue(
+            maxsize=int(fps * buffer_seconds)
+        )
         self._stop = threading.Event()
         self._gripper_width = 0.0
+        self._gripper_target = 1.0
+        self._action_fn = action_fn
         self._last_images: dict = {}
         self._thread = None
 
@@ -62,15 +74,25 @@ class StateStreamRecorder:
         self._gripper_width = value
 
     @property
+    def gripper_target(self) -> float:
+        return self._gripper_target
+
+    @gripper_target.setter
+    def gripper_target(self, value: float) -> None:
+        self._gripper_target = value
+
+    @property
     def last_images(self) -> dict:
         return self._last_images
+
+    def clear(self) -> None:
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
     def start(self) -> None:
         """Start the background polling thread."""
         self._stop.clear()
-        # Drain any stale frames from a previous episode
-        while not self._queue.empty():
-            self._queue.get_nowait()
+        self.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -80,12 +102,9 @@ class StateStreamRecorder:
         if self._thread:
             self._thread.join(timeout=timeout)
             self._thread = None
-        # Drain any remaining frames
-        while not self._queue.empty():
-            self._queue.get_nowait()
 
-    def drain(self) -> list[tuple[dict, dict]]:
-        """Return all accumulated (obs, images) and clear the queue."""
+    def drain(self) -> list[tuple[dict, np.ndarray | None, dict]]:
+        """Return all accumulated (obs, action, images) and clear the queue."""
         frames = []
         while not self._queue.empty():
             frames.append(self._queue.get_nowait())
@@ -94,12 +113,15 @@ class StateStreamRecorder:
     def _run(self) -> None:
         while not self._stop.is_set():
             t0 = time.perf_counter()
-            robot = self._get_robot()
             obs = None
+            action = None
+            robot = self._get_robot()
             if robot is not None:
                 streaming = robot.state
                 if streaming and "qpos" in streaming:
                     obs = streaming_to_obs(streaming, self._gripper_width)
+                    if self._action_fn is not None:
+                        action = self._action_fn(streaming)
 
             # Read cameras (non-blocking)
             images: dict = {}
@@ -113,7 +135,7 @@ class StateStreamRecorder:
 
             if obs is not None:
                 try:
-                    self._queue.put_nowait((obs, images))
+                    self._queue.put_nowait((obs, action, images))
                 except queue.Full:
                     pass
 

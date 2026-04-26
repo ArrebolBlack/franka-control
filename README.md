@@ -57,7 +57,7 @@ franka_control/
 │   └── camera_manager.py    # RealSense 多相机管理
 ├── data/
 │   ├── collector.py         # LeRobot 格式数据采集
-│   ├── state_recorder.py    # 后台状态流录制
+│   ├── state_recorder.py    # 后台状态流录制（stop→drain，可选 action_fn）
 │   ├── config.py            # 数据采集配置
 │   └── features.py          # LeRobot features 定义
 ├── trajectory/

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from lerobot.datasets import LeRobotDataset
+from lerobot.datasets.feature_utils import DEFAULT_FEATURES
 
 from franka_control.data.config import CollectionConfig
 from franka_control.data.features import build_franka_features
@@ -32,11 +33,11 @@ class DataCollector:
         resume: If True, resume existing dataset instead of creating new.
     """
 
-    def __init__(self, config: CollectionConfig, resume: bool = False):
+    def __init__(self, config: CollectionConfig, resume: bool = False,
+                 extra_features: dict | None = None):
         self.config = config
 
-        # Create or resume LeRobot dataset
-        features = build_franka_features(config)
+        features = build_franka_features(config, extra_features=extra_features)
         if resume:
             self.dataset = LeRobotDataset.resume(
                 repo_id=config.repo_id,
@@ -46,7 +47,8 @@ class DataCollector:
                 encoder_queue_maxsize=config.encoder_queue_maxsize,
             )
             # Validate features match
-            existing_features = set(self.dataset.features.keys())
+            default_features = set(DEFAULT_FEATURES.keys())
+            existing_features = set(self.dataset.features.keys()) - default_features
             expected_features = set(features.keys())
             if existing_features != expected_features:
                 raise ValueError(
@@ -87,6 +89,7 @@ class DataCollector:
         obs: dict,
         action: np.ndarray,
         images: dict[str, np.ndarray] | None = None,
+        extra: dict | None = None,
     ) -> None:
         """Record one frame.
 
@@ -94,6 +97,8 @@ class DataCollector:
             obs: Observation dict from FrankaEnv.get_observation().
             action: Applied action (after clipping).
             images: Camera images {cam_name: rgb_array (H,W,3) uint8}.
+            extra: Optional project-specific fields to merge into the frame
+                (caller must ensure the keys are registered in features).
         """
         if not self._episode_active:
             raise RuntimeError("No active episode")
@@ -125,6 +130,9 @@ class DataCollector:
                 key = f"observation.images.{cam_name}"
                 if key in self.dataset.features:
                     frame[key] = rgb
+
+        if extra:
+            frame.update(extra)
 
         self.dataset.add_frame(frame)
 
@@ -182,4 +190,3 @@ class DataCollector:
 
         annotations[str(episode_idx)] = {"success": success}
         ann_path.write_text(json.dumps(annotations, indent=2))
-

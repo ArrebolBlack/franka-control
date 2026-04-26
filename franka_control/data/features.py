@@ -3,11 +3,16 @@
 from franka_control.data.config import CollectionConfig
 
 
-def build_franka_features(config: CollectionConfig) -> dict:
+def build_franka_features(
+    config: CollectionConfig,
+    extra_features: dict | None = None,
+) -> dict:
     """Build LeRobot v3.0 features dict for Franka robot.
 
     Args:
         config: Collection configuration.
+        extra_features: Optional project-specific feature definitions to
+            merge into the returned dict (e.g. ``observation.phase``).
 
     Returns:
         Features dict compatible with LeRobotDataset.create().
@@ -63,5 +68,8 @@ def build_franka_features(config: CollectionConfig) -> dict:
             "shape": (cam.height, cam.width, 3),
             "names": ["height", "width", "channels"],
         }
+
+    if extra_features:
+        features.update(extra_features)
 
     return features
