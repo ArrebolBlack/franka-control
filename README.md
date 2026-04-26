@@ -56,16 +56,20 @@ franka_control/
 ├── cameras/
 │   └── camera_manager.py    # RealSense 多相机管理
 ├── data/
-│   └── collector.py         # LeRobot 格式数据采集
+│   ├── collector.py         # LeRobot 格式数据采集
+│   ├── state_recorder.py    # 后台状态流录制
+│   ├── config.py            # 数据采集配置
+│   └── features.py          # LeRobot features 定义
 ├── trajectory/
 │   ├── waypoints.py         # Waypoint/Route YAML 管理
 │   ├── planner.py           # TOPPRA 轨迹规划
 │   └── executor.py          # Route 拆分 + 轨迹执行
 └── scripts/
     ├── teleop.py            # 遥操作
-    ├── collect_data.py      # 数据采集
+    ├── collect_episodes.py  # 数据采集（多 episode + resume）
     ├── collect_waypoints.py # Waypoint 采集
-    └── run_trajectory.py    # 轨迹执行
+    ├── run_trajectory.py    # 轨迹执行
+    └── play_dataset.py      # 数据集播放器（可视化 + 分析）
 ```
 
 ## 安装
@@ -332,11 +336,75 @@ routes:
     label: "抓取放置"
 ```
 
-## 测试
+## 数据采集
+
+### 录制多个 episodes
 
 ```bash
-python -m pytest tests/ -v
+python -m franka_control.scripts.collect_episodes \
+    --robot-ip 192.168.0.100 \
+    --repo-id user/dataset \
+    --root data/dataset \
+    --device spacemouse \
+    --num-episodes 50
 ```
+
+### Resume 继续录制
+
+```bash
+python -m franka_control.scripts.collect_episodes \
+    --robot-ip 192.168.0.100 \
+    --repo-id user/dataset \
+    --root data/dataset \
+    --resume \
+    --num-episodes 20
+```
+
+**说明**：
+- `--num-episodes N`：连续录制 N 个 episodes
+- `--resume`：从已有 dataset 继续录制，自动追加新的 episode
+- 每个 episode 结束时标注 success/failure，保存到 `meta/episode_annotations.json`
+- 后台状态流录制确保夹爪阻塞期间数据不丢失
+
+## 数据集播放器
+
+`scripts/play_dataset.py` 提供完整的数据集可视化和分析功能：
+
+```bash
+python scripts/play_dataset.py \
+    --repo-id user/dataset \
+    --root data/dataset
+```
+
+### 按键说明
+
+**基础播放**：
+- `Space`：播放/暂停
+- `←/→`：单帧前后
+- `[` / `]`：上/下 episode
+- `g`：输入 episode 跳转
+- `,` / `.`：调速（0.25x - 4x）
+- `Home/End`：跳到首尾
+- 进度条拖动
+
+**视图控制**：
+- `1-9`：单相机显示
+- `0`：全部相机
+- `h`：切换 HUD 模式（normal/detailed）
+- Detailed 模式显示：joint pos/vel, ee pos/quat, gripper, action
+
+**过滤与导航**：
+- `f`：循环过滤（all/success/failure）
+- `t`：按 task 过滤
+- `l`：显示 episode 列表
+
+**分析与导出**：
+- `v`：轨迹可视化（Joint + EE 3D + Gripper）
+- `a`：Action 分布（直方图 + 时间序列）
+- `i`：Action 统计表（终端打印）
+- `p`：截图（保存所有相机）
+- `s`：视频导出（MP4）
+
 
 ## 硬件要求
 
