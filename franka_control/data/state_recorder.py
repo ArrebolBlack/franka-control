@@ -42,13 +42,15 @@ class StateStreamRecorder:
         buffer_seconds: Queue capacity in seconds of frames.
     """
 
-    def __init__(self, robot_client_fn, fps: int = 60, buffer_seconds: float = 5.0):
+    def __init__(self, robot_client_fn, cameras=None, fps: int = 60, buffer_seconds: float = 5.0):
         self._get_robot = robot_client_fn
+        self._get_cameras = cameras
         self._fps = fps
         self._dt = 1.0 / fps
-        self._queue = queue.Queue(maxsize=int(fps * buffer_seconds))
+        self._queue: queue.Queue[tuple[dict, dict]] = queue.Queue(maxsize=int(fps * buffer_seconds))
         self._stop = threading.Event()
         self._gripper_width = 0.0
+        self._last_images: dict = {}
         self._thread = None
 
     @property
@@ -59,9 +61,16 @@ class StateStreamRecorder:
     def gripper_width(self, value: float) -> None:
         self._gripper_width = value
 
+    @property
+    def last_images(self) -> dict:
+        return self._last_images
+
     def start(self) -> None:
         """Start the background polling thread."""
         self._stop.clear()
+        # Drain any stale frames from a previous episode
+        while not self._queue.empty():
+            self._queue.get_nowait()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -71,9 +80,12 @@ class StateStreamRecorder:
         if self._thread:
             self._thread.join(timeout=timeout)
             self._thread = None
+        # Drain any remaining frames
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
-    def drain(self) -> list[dict]:
-        """Return all accumulated observations and clear the queue."""
+    def drain(self) -> list[tuple[dict, dict]]:
+        """Return all accumulated (obs, images) and clear the queue."""
         frames = []
         while not self._queue.empty():
             frames.append(self._queue.get_nowait())
@@ -83,16 +95,28 @@ class StateStreamRecorder:
         while not self._stop.is_set():
             t0 = time.perf_counter()
             robot = self._get_robot()
-            if robot is None:
-                time.sleep(self._dt)
-                continue
-            streaming = robot.state
-            if streaming and "qpos" in streaming:
-                obs = streaming_to_obs(streaming, self._gripper_width)
+            obs = None
+            if robot is not None:
+                streaming = robot.state
+                if streaming and "qpos" in streaming:
+                    obs = streaming_to_obs(streaming, self._gripper_width)
+
+            # Read cameras (non-blocking)
+            images: dict = {}
+            if self._get_cameras is not None:
+                raw = self._get_cameras.read_latest()
+                for name, data in raw.items():
+                    if "rgb" in data:
+                        images[name] = data["rgb"].copy()
+                if images:
+                    self._last_images = images
+
+            if obs is not None:
                 try:
-                    self._queue.put_nowait(obs)
+                    self._queue.put_nowait((obs, images))
                 except queue.Full:
                     pass
+
             elapsed = time.perf_counter() - t0
             if elapsed < self._dt:
                 time.sleep(self._dt - elapsed)

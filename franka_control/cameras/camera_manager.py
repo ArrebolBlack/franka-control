@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from pathlib import Path
 from queue import Empty, Queue
 from typing import Optional
 
@@ -30,6 +31,11 @@ try:
     import pyrealsense2 as rs
 except ImportError:
     rs = None
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +154,14 @@ class _RealSenseCamera:
             )
         return self._last_frame or {}
 
+    def read_nowait(self) -> dict:
+        """Non-blocking read: return latest available frame without waiting."""
+        try:
+            self._last_frame = self._q.get_nowait()
+        except Empty:
+            pass
+        return self._last_frame or {}
+
     def close(self) -> None:
         """Stop thread and release device."""
         self._alive = False
@@ -200,6 +214,10 @@ class CameraManager:
         """
         return {name: cam.read() for name, cam in self._cameras.items()}
 
+    def read_latest(self) -> dict[str, dict]:
+        """Non-blocking read from all cameras. Returns latest available frames."""
+        return {name: cam.read_nowait() for name, cam in self._cameras.items()}
+
     @property
     def camera_names(self) -> list[str]:
         """List of initialized camera names."""
@@ -218,6 +236,23 @@ class CameraManager:
 
     def __repr__(self) -> str:
         return f"CameraManager(cameras={self.camera_names})"
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> CameraManager:
+        """Create CameraManager from a YAML config file.
+
+        YAML format:
+            d435:
+              serial: "138422075015"
+              resolution: [640, 480]
+              fps: 60
+              enable_depth: false
+        """
+        if yaml is None:
+            raise ImportError("PyYAML is required: pip install pyyaml")
+        with open(path) as f:
+            cfg = yaml.safe_load(f)
+        return cls(cfg)
 
     @staticmethod
     def list_devices() -> list[dict]:
