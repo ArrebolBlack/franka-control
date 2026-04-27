@@ -20,6 +20,7 @@ pynput
 # Cameras
 pyrealsense2
 opencv-python
+matplotlib
 
 # Kinematics
 pin

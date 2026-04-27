@@ -1,415 +1,311 @@
 # Franka Control
 
-Franka Research 3 机械臂控制库。双机架构：算法机（GPU）通过 TCP 控制机（RT kernel）。
-提供 Gym 环境、遥操作、轨迹规划、数据采集功能。
+No-ROS, Python-native control and data collection toolkit for Franka Research 3.
 
-## 架构
+Franka Control is designed for embodied AI, imitation learning, reinforcement learning,
+teleoperation, motion planning, and robotics/control research on real Franka hardware.
+It provides a lightweight dual-machine stack with fast ZMQ state streaming, a Gymnasium
+environment, SpaceMouse/keyboard teleoperation, waypoint and TOPPRA trajectory tools,
+Pinocchio FK/IK, RealSense camera integration, and LeRobot v3 dataset collection.
 
+> Status: active research code. The API is usable, but hardware control always requires
+> careful validation on your robot and network setup.
+
+## Why This Project
+
+Most Franka software stacks are either ROS-centered or narrowly focused on one layer of
+the robotics pipeline. This project aims to provide a complete, lightweight Python stack:
+
+- No ROS runtime dependency.
+- Dual-machine architecture for a real-time control PC plus an algorithm/GPU machine.
+- High-frequency robot state streaming over ZMQ.
+- Gymnasium-compatible `FrankaEnv` for policies and RL-style loops.
+- SpaceMouse and keyboard teleoperation.
+- Waypoint capture, route editing, TOPPRA trajectory planning and execution.
+- Pinocchio-based FK/IK utilities.
+- Multi-RealSense camera support.
+- LeRobot v3 embodied dataset collection, resume, annotation, playback and analysis.
+
+## Relationship to ROS, franka_ros, libfranka, and LeRobot
+
+Franka Control is not a ROS wrapper and does not require `roscore`, ROS messages, ROS
+controllers, or MoveIt at runtime.
+
+| Stack | Role |
+|---|---|
+| `franka_ros` / ROS 2 stacks | Full ROS ecosystem integration, MoveIt, ROS tooling. Use these if your system is ROS-native. |
+| `libfranka` / `pylibfranka` | Low-level Franka C++/Python FCI bindings. This project uses `pylibfranka` for gripper service on the control machine. |
+| `aiofranka` | Low-level async robot controller. This project wraps it behind `RobotServer` so the algorithm machine does not need FCI libraries. |
+| `LeRobot` | Dataset format and tooling. This project records real Franka demonstrations into LeRobot v3 format. |
+| Franka Control | Python-native no-ROS stack for teleop, control, planning, data collection, and learning research. |
+
+This project complements ROS-based stacks. It is best suited when you want a small
+Python API, rapid embodied AI iteration, and direct integration with learning pipelines.
+
+## Screenshots and Media
+
+Screenshot slots are reserved under [`docs/assets/`](docs/assets/README.md). Suggested
+media before public release:
+
+| Asset | Purpose |
+|---|---|
+| `docs/assets/teleop-preview.png` | SpaceMouse/keyboard teleoperation in action |
+| `docs/assets/data-collection.png` | RealSense preview while collecting LeRobot episodes |
+| `docs/assets/dataset-player.png` | Dataset playback with HUD and multi-camera view |
+| `docs/assets/trajectory-analysis.png` | Joint/EE/gripper trajectory visualization |
+| `docs/assets/system-architecture.png` | Dual-machine architecture diagram |
+
+## Architecture
+
+```text
+Algorithm / GPU machine                         Control / RT machine
+Python scripts, policies, cameras               Franka FCI connection
+
+FrankaEnv / teleop / collect
+RobotClient  ───── ZMQ RPC :5555 ─────────────▶ RobotServer ─▶ aiofranka
+state PULL   ◀──── ZMQ stream :5557 ─────────── 1 kHz state polling
+
+GripperClient ──── ZMQ RPC :5556 ─────────────▶ GripperServer ─▶ pylibfranka
+
+CameraManager ─── RealSense RGB frames
+DataCollector ─── LeRobotDataset v3
 ```
-算法机 (Python)                          控制机 (RT kernel)
-├── FrankaEnv (Gymnasium)                ├── RobotServer (TCP 5555)
-│   └── RobotClient (ZMQ DEALER)         │   └─ FrankaRemoteController (本地)
-│       └─ PULL 状态接收 (port 5557)     │       └─ aiofranka 子进程 (IPC/SharedMemory)
-├── 遥操作 (SpaceMouse/Keyboard)          ├── GripperServer (TCP 5556)
-├── TOPPRA 轨迹规划                       │   └─ pylibfranka.Gripper (本地)
-├── 数据采集 (LeRobot 格式)               └── Franka Research 3
-└── 相机管理 (RealSense)
-        ↕ TCP ZMQ (msgpack)
-```
 
-### 双机部署
+Important IP names:
 
-- **控制机**：运行 RobotServer（端口 5555 + 状态流 5557）+ GripperServer（端口 5556），需要 aiofranka + pylibfranka
-- **算法机**：运行 FrankaEnv / 脚本，通过 TCP ZMQ 与控制机通信，不需要安装 FCI 相关库
-- **流式架构**：set() fire-and-forget + PUSH/PULL 状态流（1kHz），热路径零 RTT；阻塞命令（connect/move/start）仍走同步 RPC
+| Name | Meaning |
+|---|---|
+| FCI IP / `--fci-ip` | Franka robot FCI address, used only by `RobotServer` on the control PC |
+| Control PC IP / `--robot-ip` | Network address of the PC running `RobotServer`, used by algorithm-side scripts |
+| `--gripper-host` | Gripper service host, usually the same as `--robot-ip` |
 
-### IP 参数说明
+## Feature Map
 
-| 参数 | 含义 | 在哪里使用 |
-|------|------|-----------|
-| `--fci-ip` | Franka 机器人的 FCI IP（如 192.168.0.2） | 仅控制机启动 RobotServer 时 |
-| `--robot-ip` | 控制机的 IP（算法机连接目标） | 算法机所有脚本 |
-| `--gripper-host` | Gripper 服务器地址，默认 = robot-ip | 算法机（可选） |
+| Feature | Code | Entry point |
+|---|---|---|
+| Robot service | `franka_control/robot/robot_server.py` | `python -m franka_control.robot` |
+| Gripper service | `franka_control/gripper/gripper_server.py` | `python -m franka_control.gripper` |
+| Gym environment | `franka_control/envs/franka_env.py` | Python API |
+| Teleoperation | `franka_control/scripts/teleop.py` | `python -m franka_control.scripts.teleop` |
+| Waypoint capture | `franka_control/scripts/collect_waypoints.py` | `python -m franka_control.scripts.collect_waypoints` |
+| Trajectory execution | `franka_control/scripts/run_trajectory.py` | `python -m franka_control.scripts.run_trajectory` |
+| Dataset collection | `franka_control/scripts/collect_episodes.py` | `python -m franka_control.scripts.collect_episodes` |
+| Dataset player | `scripts/play_dataset.py` | `python scripts/play_dataset.py` |
+| Cameras | `franka_control/cameras/camera_manager.py` | Python API / collection script |
+| LeRobot writer | `franka_control/data/collector.py` | Python API |
+| State recorder | `franka_control/data/state_recorder.py` | Used by `collect_episodes.py` |
+| FK/IK | `franka_control/kinematics/ik_solver.py` | Python API |
+| Latency measurement | `franka_control/scripts/measure_latency.py` | `python -m franka_control.scripts.measure_latency` |
 
-## 项目结构
+## Installation
 
-```
-franka_control/
-├── robot/                   # 双机 TCP 桥接层
-│   ├── robot_server.py      # 控制机运行，包装 aiofranka
-│   ├── robot_client.py      # 算法机运行，TCP 客户端
-│   └── __main__.py          # python -m franka_control.robot
-├── gripper/                 # 夹爪 ZMQ 服务端/客户端
-│   ├── gripper_server.py    # 控制机运行，封装 pylibfranka.Gripper
-│   ├── gripper_client.py    # 算法机运行，阻塞/非阻塞 API
-│   └── __main__.py          # python -m franka_control.gripper
-├── envs/
-│   └── franka_env.py        # Gymnasium 环境
-├── kinematics/              # FK/IK 求解器（Pinocchio）
-│   ├── ik_solver.py         # IKSolver 类
-│   ├── assets/              # FR3v2 URDF + mesh 文件
-│   ├── verify_fk.py         # FK 验证脚本
-│   └── verify_ik.py         # IK 验证脚本
-├── teleop/
-│   ├── spacemouse_teleop.py # SpaceMouse 遥操作
-│   └── keyboard_teleop.py  # 键盘遥操作
-├── cameras/
-│   └── camera_manager.py    # RealSense 多相机管理
-├── data/
-│   ├── collector.py         # LeRobot 格式数据采集
-│   ├── state_recorder.py    # 后台状态流录制（stop→drain，可选 action_fn）
-│   ├── config.py            # 数据采集配置
-│   └── features.py          # LeRobot features 定义
-├── trajectory/
-│   ├── waypoints.py         # Waypoint/Route YAML 管理
-│   ├── planner.py           # TOPPRA 轨迹规划
-│   └── executor.py          # Route 拆分 + 轨迹执行
-└── scripts/
-    ├── teleop.py            # 遥操作
-    ├── collect_episodes.py  # 数据采集（多 episode + resume）
-    ├── collect_waypoints.py # Waypoint 采集
-    ├── run_trajectory.py    # 轨迹执行
-    └── play_dataset.py      # 数据集播放器（可视化 + 分析）
-```
+Recommended environment:
 
-## 安装
+- Ubuntu 22.04 or 24.04.
+- Python 3.12.
+- A desktop session on the algorithm machine if you use OpenCV windows, keyboard
+  teleop, or the dataset player.
+- PREEMPT_RT, Franka FCI, `aiofranka`, and `pylibfranka` on the control machine.
+- For GUI preview and playback, use `opencv-python`. If you intentionally run
+  headless servers, use `--display off`; replacing it with `opencv-python-headless`
+  disables OpenCV windows and the dataset player GUI.
+
+Algorithm machine:
 
 ```bash
-# 算法机（基础依赖）
-pip install numpy scipy gymnasium pyyaml pyzmq msgpack
+git clone https://github.com/ArrebolBlack/franka-control.git
+cd franka-control
 
-# 轨迹规划
-pip install toppra
+conda create -n franka python=3.12 -y
+conda activate franka
 
-# 运动学（FK/IK）
-pip install pin  # 注意：不是 pinocchio 包
+python -m pip install -U pip setuptools wheel
+python -m pip install -e ".[dev]"
+```
 
-# 遥操作 (需要 SpaceMouse)
+Control machine:
+
+```bash
+git clone https://github.com/ArrebolBlack/franka-control.git
+cd franka-control
+
+conda create -n franka python=3.12 -y
+conda activate franka
+
+python -m pip install -U pip setuptools wheel
+python -m pip install -e .
+python -m pip install -e ".[control-machine]"
+```
+
+If `aiofranka` or `pylibfranka` cannot be installed from pip in your setup, install
+them using your local Franka FCI installation procedure.
+
+SpaceMouse on Linux usually needs HID libraries and udev permissions:
+
+```bash
 sudo apt install libhidapi-hidraw0 libhidapi-libusb0
-pip install pyspacemouse hidapi
-
-# 遥操作 (键盘模式)
-pip install pynput
-
-# SpaceMouse USB 权限（免 sudo 访问 HID 设备）
-sudo tee /etc/udev/rules.d/99-spacemouse.rules > /dev/null << 'RULES'
+sudo tee /etc/udev/rules.d/99-spacemouse.rules > /dev/null <<'RULES'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="256f", MODE="0666"
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="256f", MODE="0666"
 RULES
-sudo udevadm control --reload-rules && sudo udevadm trigger
-
-# 相机
-pip install pyrealsense2
-
-# 数据采集
-pip install lerobot
-
-# 控制机专用（需要 Franka FCI）
-pip install pylibfranka aiofranka
+sudo udevadm control --reload-rules
+sudo udevadm trigger
 ```
 
-## 真机测试步骤
-
-### 前提
-
-1. Franka Research 3 已上电，FCI 已解锁（Desk 网页界面）
-2. 控制机已安装 PREEMPT_RT 内核 + aiofranka + pylibfranka
-3. 两台机器网络互通（算法机能 ping 通控制机）
-
-### 网络配置示例
-
-假设：
-- Franka FCI IP：`192.168.0.2`（Franka 机器人自身 IP，在 Desk 里配置）
-- 控制机 IP：`192.168.0.100`（与 FCI 在同一网段）
-- 算法机 IP：`192.168.0.200`（与控制机在同一网段）
-
-### 第1步：控制机启动服务
-
-控制机上开两个终端：
+Run tests:
 
 ```bash
-# 终端1：启动 RobotServer（FCI IP 是机器人的 IP）
-python -m franka_control.robot --fci-ip 192.168.0.2
-
-# 终端2：启动 GripperServer（robot-ip 是 FCI IP）
-python -m franka_control.gripper --robot-ip 192.168.0.2
+python -m pytest tests -q
 ```
 
-两个终端应该分别显示：
-```
-Robot server listening on port 5555
-Gripper server listening on port 5556
-```
+## Quick Start
 
-### 第2步：算法机验证连接
+Assume:
+
+- Franka FCI IP: `192.168.0.2`
+- Control PC IP: `192.168.0.100`
+- Algorithm PC IP: `192.168.0.200`
+
+1. Start robot service on the control PC:
 
 ```bash
-# 快速测试：算法机上用 Python 验证 TCP 连通
-python -c "
-from franka_control.robot.robot_client import RobotClient
-c = RobotClient(host='192.168.0.100', port=5555)
-print('Robot server reachable:', c._send_command('is_running'))
-c.close()
-"
+python -m franka_control.robot \
+    --fci-ip 192.168.0.2 \
+    --port 5555 \
+    --state-stream-port 5557 \
+    --poll-hz 1000
 ```
 
-如果成功应输出类似 `Robot server reachable: {'success': True, 'running': False}`。
-
-### 第3步：算法机控制机器人
+2. Start gripper service on the control PC:
 
 ```bash
-# 遥操作 — SpaceMouse（默认）
-# 默认 100Hz, 平移 2.0 m/s, 旋转 5.0 rad/s（速度模式）
-python -m franka_control.scripts.teleop \
-    --robot-ip 192.168.0.100
-
-# 遥操作 — 键盘
-python -m franka_control.scripts.teleop \
-    --robot-ip 192.168.0.100 --device keyboard
-
-# 调灵敏度（直接改最大速度）
-python -m franka_control.scripts.teleop \
-    --robot-ip 192.168.0.100 \
-    --action-scale-t 1.0 --action-scale-r 2.5
-
-# 冻结旋转（只保留平移）
-python -m franka_control.scripts.teleop \
-    --robot-ip 192.168.0.100 --freeze-rotation
-
-# 或采集 waypoint（支持 keyboard 和 spacemouse）
-python -m franka_control.scripts.collect_waypoints \
-    --robot-ip 192.168.0.100 \
-    --waypoints config/waypoints.yaml
-
-# 键盘模式采集 waypoint
-python -m franka_control.scripts.collect_waypoints \
-    --robot-ip 192.168.0.100 \
-    --device keyboard \
-    --waypoints config/waypoints.yaml
+python -m franka_control.gripper \
+    --robot-ip 192.168.0.2 \
+    --port 5556
 ```
 
-**注意**：`--robot-ip` 是控制机 IP，不是 FCI IP。
-
-### 第4步：执行轨迹
+3. Verify network latency from the algorithm PC:
 
 ```bash
-# 先 dry-run 验证轨迹规划
-python -m franka_control.scripts.run_trajectory \
-    --waypoints config/waypoints.yaml \
-    --route pick_place \
-    --dry-run
-
-# 真机执行（--time-scale 3.0 减速，推荐首次使用）
-python -m franka_control.scripts.run_trajectory \
+python -m franka_control.scripts.measure_latency \
     --robot-ip 192.168.0.100 \
-    --waypoints config/waypoints.yaml \
-    --route pick_place \
-    --time-scale 3.0
-
-# 全速执行
-python -m franka_control.scripts.run_trajectory \
-    --robot-ip 192.168.0.100 \
-    --waypoints config/waypoints.yaml \
-    --route pick_place
-
-# 循环执行
-python -m franka_control.scripts.run_trajectory \
-    --robot-ip 192.168.0.100 \
-    --waypoints config/waypoints.yaml \
-    --route pick_place \
-    --time-scale 3.0 \
-    --loop
+    -n 100
 ```
 
-**注意**：PID 控制器无速度前馈，`--time-scale` 通过拉长时间戳减速。经验值 `3.0`（原速 1/3）。
+4. Run low-speed teleoperation:
 
-### 常见问题
+```bash
+python -m franka_control.scripts.teleop \
+    --robot-ip 192.168.0.100 \
+    --device spacemouse \
+    --action-scale-t 1.0 \
+    --action-scale-r 2.5
+```
 
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| `Server timeout` | 算法机连不上控制机 | 检查 IP、防火墙、端口 5555/5556 |
-| `Robot command failed: stop` | 机器人未解锁或 FCI 未启动 | Desk 网页解锁 FCI |
-| `Reflex` 模式导致 connect 失败 | disconnect 后机器人进入错误保护 | RobotServer 会自动调用 `automatic_error_recovery()`，通常无需干预 |
-| `aiofranka is not installed` | 控制机未安装 aiofranka | 控制机上 `pip install aiofranka` |
-| `Worker busy` | 上一个阻塞命令还在执行 | 等待完成，或重启 RobotServer |
-| `Already connected` | RobotServer 已有连接 | 重启 RobotServer |
-| Gripper homing 超时 | 首次 homing 较慢，pylibfranka C++ 调用持有 GIL | 客户端 RCVTIMEO 已设为 10s，重启 GripperServer 后重试 |
+5. Collect demonstrations:
+
+```bash
+python -m franka_control.scripts.collect_episodes \
+    --robot-ip 192.168.0.100 \
+    --repo-id user/franka_pick \
+    --root data/franka_pick \
+    --task-name "pick red cube" \
+    --device spacemouse \
+    --control-mode ee_delta \
+    --fps 60 \
+    --num-episodes 50 \
+    --cameras config/cameras.yaml \
+    --display auto
+```
+
+6. Inspect the dataset:
+
+```bash
+python scripts/play_dataset.py \
+    --repo-id user/franka_pick \
+    --root data/franka_pick
+```
+
+For the full workflow, see [`docs/quickstart.md`](docs/quickstart.md).
+
+## Dataset Format
+
+The collector writes LeRobot v3 datasets. Default features:
+
+| Key | Shape | Description |
+|---|---:|---|
+| `observation.state` | `(8,)` | `q0..q6 + gripper_width` |
+| `observation.joint_vel` | `(7,)` | Joint velocities |
+| `observation.ee_pose` | `(7,)` | `x,y,z,qx,qy,qz,qw` in SciPy `xyzw` order |
+| `observation.effort` | `(7,)` | Joint torques |
+| `action` | `(8,)` or `(7,)` | Depends on control mode |
+| `observation.images.<camera>` | `(H,W,3)` | RGB camera frame |
+| `task` | string | Natural language instruction |
+
+Success/failure annotations are stored in:
+
+```text
+<dataset_root>/meta/episode_annotations.json
+```
+
+More details: [`docs/data_collection.md`](docs/data_collection.md).
 
 ## Python API
 
-### FrankaEnv
-
 ```python
-from franka_control.envs import FrankaEnv
 import numpy as np
+from franka_control.envs import FrankaEnv
 
 env = FrankaEnv(
-    robot_ip="192.168.0.100",    # 控制机 IP（RobotServer 地址）
-    gripper_host="192.168.0.100", # Gripper 服务器（默认同 robot_ip）
-    action_mode="joint_abs",      # joint_abs / joint_delta / ee_abs / ee_delta
-    gripper_mode="binary",        # binary / continuous
+    robot_ip="192.168.0.100",
+    gripper_host="192.168.0.100",
+    action_mode="ee_delta",
+    gripper_mode="binary",
 )
 
-obs, _ = env.reset()
+obs, info = env.reset()
 
-# 关节绝对位置控制 (joint_abs)
-action = obs["joint_pos"]  # (7,) rad
-obs, reward, terminated, truncated, info = env.step(
-    np.append(action, 1.0)  # +1 维 gripper (1.0=open, 0.0=close)
-)
-
-# 末端增量控制 (ee_delta)
-env.set_action_mode("ee_delta")
-action = np.array([0.01, 0, 0, 0, 0, 0, 1.0])  # xyz + rotvec + gripper
-obs, _, _, _, _ = env.step(action)
-
-# 阻塞式移动到目标关节角
-env.move_to(target_qpos)
+# ee_delta: dx, dy, dz, drx, dry, drz, gripper
+action = np.array([0.01, 0, 0, 0, 0, 0, 1.0], dtype=np.float32)
+obs, reward, terminated, truncated, info = env.step(action)
+print(info["applied_action"])
 
 env.close()
 ```
 
-### 轨迹规划
+More API examples: [`docs/api.md`](docs/api.md).
 
-```python
-from franka_control.trajectory.planner import TrajectoryPlanner
-from franka_control.trajectory.executor import execute_route
-from franka_control.trajectory.waypoints import WaypointStore
-import numpy as np
+## Documentation
 
-store = WaypointStore()
-store.load("config/waypoints.yaml")
+- [Documentation Index](docs/README.md)
+- [Quick Start](docs/quickstart.md)
+- [Data Collection](docs/data_collection.md)
+- [Python API](docs/api.md)
+- [No-ROS Design and ROS Comparison](docs/ros_comparison.md)
+- [Chinese README](README.zh-CN.md)
 
-planner = TrajectoryPlanner()  # 默认 80% 的 aiofranka 参数
+## Safety and Limitations
 
-# 在真机上执行完整 route（time_scale 减速）
-execute_route(env, store, "pick_place", planner, time_scale=3.0)
+- This repository controls real robot hardware. Always test with conservative
+  velocity, acceleration, and workspace limits.
+- `FrankaEnv` does not provide task rewards or episode termination logic.
+- The control machine is responsible for real-time FCI-side dependencies.
+- The algorithm machine should not be treated as a hard real-time controller.
+- The project is not affiliated with or endorsed by Franka Robotics GmbH.
+
+## Citation
+
+If this repository helps your research, please cite it using [`CITATION.cff`](CITATION.cff).
+
+```bibtex
+@software{franka_control,
+  title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
+  author = {Yu, Yiqi},
+  year = {2026},
+  url = {https://github.com/ArrebolBlack/franka-control}
+}
 ```
 
-### 运动学（FK/IK）
+## License
 
-```python
-from franka_control.kinematics import IKSolver
-import numpy as np
-
-# 默认加载 FR3v2 + 法兰坐标系
-solver = IKSolver()
-
-# 正运动学：关节角 → 末端位姿
-q = np.array([0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785])
-T = solver.fk(q)  # 4x4 齐次变换矩阵
-print(f"Position: {T[:3, 3]}")
-
-# 逆运动学：末端位姿 → 关节角
-q_init = q  # 初值
-q_solution, converged = solver.ik(q_init, T)
-if converged:
-    print(f"IK solution: {q_solution}")
-```
-
-**验证脚本：**
-```bash
-# FK 验证（对比真机状态）
-python -m franka_control.kinematics.verify_fk --robot-ip <控制机IP>
-
-# IK 验证（多构型收敛性测试）
-python -m franka_control.kinematics.verify_ik --robot-ip <控制机IP>
-```
-
-## Waypoint YAML 格式
-
-```yaml
-waypoints:
-  home:
-    joint_angles: [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
-    label: "安全起始位"
-  above_table:
-    joint_angles: [0.1, -0.5, 0.2, -2.0, 0.1, 1.3, 0.5]
-    label: "桌面正上方"
-
-routes:
-  pick_place:
-    waypoints: [home, above_table, grasp_pos, lift_pos, home]
-    gripper_actions:
-      grasp_pos: close
-      lift_pos: open
-    label: "抓取放置"
-```
-
-## 数据采集
-
-### 录制多个 episodes
-
-```bash
-python -m franka_control.scripts.collect_episodes \
-    --robot-ip 192.168.0.100 \
-    --repo-id user/dataset \
-    --root data/dataset \
-    --device spacemouse \
-    --num-episodes 50
-```
-
-### Resume 继续录制
-
-```bash
-python -m franka_control.scripts.collect_episodes \
-    --robot-ip 192.168.0.100 \
-    --repo-id user/dataset \
-    --root data/dataset \
-    --resume \
-    --num-episodes 20
-```
-
-**说明**：
-- `--num-episodes N`：连续录制 N 个 episodes
-- `--resume`：从已有 dataset 继续录制，自动追加新的 episode
-- 每个 episode 结束时标注 success/failure，保存到 `meta/episode_annotations.json`
-- 后台状态流录制确保夹爪阻塞期间数据不丢失
-
-## 数据集播放器
-
-`scripts/play_dataset.py` 提供完整的数据集可视化和分析功能：
-
-```bash
-python scripts/play_dataset.py \
-    --repo-id user/dataset \
-    --root data/dataset
-```
-
-### 按键说明
-
-**基础播放**：
-- `Space`：播放/暂停
-- `←/→`：单帧前后
-- `[` / `]`：上/下 episode
-- `g`：输入 episode 跳转
-- `,` / `.`：调速（0.25x - 4x）
-- `Home/End`：跳到首尾
-- 进度条拖动
-
-**视图控制**：
-- `1-9`：单相机显示
-- `0`：全部相机
-- `h`：切换 HUD 模式（normal/detailed）
-- Detailed 模式显示：joint pos/vel, ee pos/quat, gripper, action
-
-**过滤与导航**：
-- `f`：循环过滤（all/success/failure）
-- `t`：按 task 过滤
-- `l`：显示 episode 列表
-
-**分析与导出**：
-- `v`：轨迹可视化（Joint + EE 3D + Gripper）
-- `a`：Action 分布（直方图 + 时间序列）
-- `i`：Action 统计表（终端打印）
-- `p`：截图（保存所有相机）
-- `s`：视频导出（MP4）
-
-
-## 硬件要求
-
-- **机器人**：Franka Research 3 + FCI 许可
-- **控制机**：Ubuntu 24 + PREEMPT_RT 内核，运行 RobotServer + GripperServer
-- **算法机**：Python 3.10+，通过 TCP ZMQ 与控制机通信
-- **遥操作**：3Dconnexion SpaceMouse Compact 或键盘（需桌面环境）
-- **相机**（可选）：Intel RealSense（D435 等）
+This project is released under the Apache License 2.0. See [`LICENSE`](LICENSE).
