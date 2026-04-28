@@ -21,8 +21,8 @@ As of 2026-04-28:
 - Community-readiness implementation is committed locally as `f988044`.
 - GitHub Actions is green on `origin/main` after fixing ignored local-file links
   in `docs/README.md`.
-- GitHub Actions v6 upgrade is in progress to remove Node.js 20 deprecation
-  warnings before the release baseline.
+- GitHub Actions v6 upgrade is complete; run `25049362136` passed after the
+  workflow moved to `actions/checkout@v6` and `actions/setup-python@v6`.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

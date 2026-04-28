@@ -168,7 +168,9 @@ still blocked. Keep entries factual and short.
 - CI emitted a non-blocking Node.js 20 deprecation warning for
   `actions/checkout@v4` and `actions/setup-python@v5`. Official releases show
   `actions/checkout@v6.0.2` and `actions/setup-python@v6.2.0`; workflow upgrade
-  is in progress.
+  was committed and pushed as `ddd53e5 ci: update github actions versions`.
+- GitHub Actions run `25049362136` passed on `origin/main` after the Actions v6
+  upgrade.
 - Real hardware validation values are still pending FR3 access.
 - Real screenshots/GIFs are still missing.
 - `docs/assets/system-architecture.png` exists, but teleop, data collection,
@@ -186,6 +188,6 @@ still blocked. Keep entries factual and short.
 
 ## Next Recommended Iteration
 
-Commit and push the GitHub Actions v6 upgrade, then confirm CI remains green.
-After CI remains green, collect real FR3 validation values and capture the
-remaining README media assets.
+Collect real FR3 validation values and capture the remaining README media
+assets. Release and Franka Community submission remain blocked until those
+external artifacts are complete.

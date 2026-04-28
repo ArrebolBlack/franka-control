@@ -141,8 +141,8 @@ Local status:
 - `[x]` GitHub Actions has passed on `origin/main`.
 - `[x]` First GitHub Actions run `25048732038` failed on Markdown links to
   ignored local files; fixed by commit `b91d53a`.
-- `[~]` GitHub Actions v6 upgrade is in progress to remove the Node.js 20
-  deprecation warning.
+- `[x]` GitHub Actions v6 upgrade removed the Node.js 20 deprecation warning;
+  run `25049362136` passed.
 
 Required local commands before release:
 
