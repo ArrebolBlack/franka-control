@@ -140,19 +140,11 @@ Status legend:
 
 Recommended next implementation batch:
 
-1. Commit and push the community-readiness batch.
-   - Local commit exists: `f988044 docs: add community readiness gates`.
-   - Memory update commit exists: `372432a docs: record community readiness commit`.
-   - Both commits are pushed to `origin/main`.
-2. Confirm GitHub Actions passes on `origin/main`.
-   - First run `25048732038` failed due ignored local docs links.
-   - Markdown-link fix commit `b91d53a` passed in run `25048952721`.
-   - CI badge/status commit `3490ac0` passed in run `25049184348`.
-   - Actions v6 upgrade commit `ddd53e5` passed in run `25049362136`.
-3. Capture final README media assets:
+1. Capture final README media assets:
    - `docs/assets/teleop-preview.gif`
    - `docs/assets/data-collection-preview.gif`
    - `docs/assets/dataset-player.png`
    - `docs/assets/trajectory-analysis.png`
-4. Fill `docs/hardware_validation.md` with real tested FR3 values.
-5. Finalize `CHANGELOG.md` for `v0.1.0`.
+2. Fill `docs/hardware_validation.md` with real tested FR3 values.
+3. Finalize `CHANGELOG.md` for `v0.1.0`.
+4. Create the `v0.1.0` release after media and hardware validation are ready.

@@ -16,12 +16,12 @@ As of 2026-04-28:
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: matrix exists, but real tested values are still pending.
 - CI and offline quality gates: workflow and local checks are configured; remote
-  GitHub Actions run `25049184348` passed on `origin/main`.
+  GitHub Actions run `25049362136` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
 - Demo media: system architecture image exists; real workflow screenshots/GIFs
   are still pending.
-- Release readiness: blocked until hardware validation, demo media, and remote
-  CI are complete.
+- Release readiness: blocked until hardware validation, demo media, and the
+  GitHub release are complete.
 - Franka Community submission: draft exists, not ready to send.
 
 ## 1. Repository Identity
