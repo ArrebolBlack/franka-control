@@ -247,6 +247,21 @@ external artifacts are complete.
 - Documented the helper in `docs/hardware_validation.md` and `docs/README.md`.
 - Added compile and `--help` smoke coverage for the helper in CI.
 
+### Validation
+
+- Local checks passed:
+  - `python scripts/collect_validation_info.py --help`
+  - `python scripts/collect_validation_info.py --format json`
+  - `python scripts/collect_validation_info.py --format markdown`
+  - `python -m py_compile ... scripts/collect_validation_info.py`
+  - `python scripts/check_markdown_links.py`
+  - `git diff --check`
+  - `python -m ruff check franka_control scripts tests`
+  - `python -m pytest tests -q`
+- Committed and pushed as
+  `77effa3 tools: add hardware validation info helper`.
+- GitHub Actions run `25071752853` passed on `origin/main`.
+
 ### Remaining
 
 - The helper still needs to be run on the actual control PC and algorithm PC.

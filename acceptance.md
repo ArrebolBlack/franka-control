@@ -15,7 +15,7 @@ As of 2026-04-29:
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: matrix exists, but real tested values are still pending.
 - CI and offline quality gates: workflow and local checks are configured; remote
-  GitHub Actions run `25049362136` passed on `origin/main`.
+  GitHub Actions run `25071752853` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
 - GitHub triage setup: required labels, `v0.1.0` milestone, and release-blocker
   issues exist.
@@ -144,6 +144,7 @@ Local status:
   ignored local files; fixed by commit `b91d53a`.
 - `[x]` GitHub Actions v6 upgrade removed the Node.js 20 deprecation warning;
   run `25049362136` passed.
+- `[x]` Hardware validation helper is covered by CI; run `25071752853` passed.
 
 Required local commands before release:
 

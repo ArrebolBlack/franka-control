@@ -26,6 +26,8 @@ As of 2026-04-29:
 - GitHub About description, topics, required labels, `v0.1.0` milestone, and
   release-blocker issues are configured.
 - Hardware validation helper script is added to reduce manual setup reporting.
+- GitHub Actions run `25071752853` passed after adding validation helper
+  coverage.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

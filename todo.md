@@ -28,6 +28,7 @@ Status legend:
 - `[x]` GitHub About description and topics are set.
 - `[x]` GitHub release-blocker milestone and issues are created.
 - `[x]` Hardware validation environment-info helper is added.
+- `[x]` Hardware validation helper is covered by green CI.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
