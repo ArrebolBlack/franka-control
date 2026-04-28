@@ -68,6 +68,7 @@ SpaceMouse:
 ```bash
 python -m franka_control.scripts.collect_episodes \
     --robot-ip 192.168.0.100 \
+    --gripper-host 192.168.0.100 \
     --repo-id user/franka_pick \
     --root data/franka_pick \
     --task-name "pick red cube" \
@@ -83,6 +84,7 @@ Keyboard:
 ```bash
 python -m franka_control.scripts.collect_episodes \
     --robot-ip 192.168.0.100 \
+    --gripper-host 192.168.0.100 \
     --repo-id user/franka_pick \
     --root data/franka_pick \
     --task-name "pick red cube" \
@@ -145,4 +147,3 @@ Keyboard mode:
 - Blocking gripper calls therefore do not freeze recorded camera frames.
 - Success/failure is stored in `meta/episode_annotations.json`.
 - Failed episodes are discarded by default unless `--save-failure` is set.
-

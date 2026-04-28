@@ -6,6 +6,8 @@ Usage:
     python scripts/play_dataset.py --repo-id test/cameras --root /tmp/test_cameras
 """
 
+from __future__ import annotations
+
 # ============================================================================
 # Part 1: Imports & Constants
 # ============================================================================
@@ -14,11 +16,19 @@ import json
 import time
 from pathlib import Path
 
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from lerobot.datasets.lerobot_dataset import LeRobotDataset
+try:
+    import cv2
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+    from lerobot.datasets.lerobot_dataset import LeRobotDataset
+except ImportError as _runtime_import_error:
+    cv2 = None
+    np = None
+    plt = None
+    LeRobotDataset = None
+else:
+    _runtime_import_error = None
 
 # 速度档位
 SPEED_LEVELS = [0.25, 0.5, 1.0, 2.0, 4.0]
@@ -879,11 +889,21 @@ class VideoExporter:
 # ============================================================================
 # Part 7: Main Loop
 # ============================================================================
+def _ensure_runtime_dependencies() -> None:
+    """Fail with a clear message after argparse has handled --help."""
+    if _runtime_import_error is not None:
+        raise SystemExit(
+            "Dataset player requires OpenCV, NumPy, Matplotlib, and LeRobot. "
+            f"Missing dependency: {_runtime_import_error}"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Dataset Player - 完整版")
     parser.add_argument("--repo-id", required=True, help="Dataset repo ID")
     parser.add_argument("--root", required=True, help="Dataset root path")
     args = parser.parse_args()
+    _ensure_runtime_dependencies()
 
     # 初始化
     print("Loading dataset...")
@@ -938,8 +958,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
 
 

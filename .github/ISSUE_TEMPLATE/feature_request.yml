@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is currently difficult or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Robot control
+        - Gripper
+        - Teleoperation
+        - Trajectory planning
+        - Cameras
+        - Data collection
+        - Dataset playback
+        - Documentation
+        - CI or project maintenance
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware context
+      description: Fill this if the feature depends on a specific robot, camera, gripper, or teleop device.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Scope checks
+      options:
+        - label: This does not require claiming official Franka Robotics support.
+          required: true
+        - label: I described any robot-motion or safety implications.
+          required: true

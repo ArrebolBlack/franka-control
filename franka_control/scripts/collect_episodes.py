@@ -267,6 +267,12 @@ def main():
 
     # ── Dataset ──────────────────────────────────────────────────
     parser.add_argument("--robot-ip", required=True, help="Control machine IP")
+    parser.add_argument(
+        "--gripper-host",
+        default=None,
+        help="Gripper server host (default: same as --robot-ip)",
+    )
+    parser.add_argument("--gripper-port", type=int, default=5556)
     parser.add_argument("--repo-id", required=True, help="Dataset repo ID")
     parser.add_argument("--root", required=True, help="Local dataset directory")
     parser.add_argument("--task-name", default="manipulation", help="Task name / instruction")
@@ -364,7 +370,8 @@ def main():
         root=Path(args.root),
         task_name=args.task_name,
         robot_ip=args.robot_ip,
-        gripper_host=args.robot_ip,
+        gripper_host=args.gripper_host or args.robot_ip,
+        gripper_port=args.gripper_port,
         control_mode=args.control_mode,
         gripper_mode=gripper_mode or "binary",
         fps=args.fps,

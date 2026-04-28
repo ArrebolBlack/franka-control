@@ -49,13 +49,15 @@ media before public release:
 
 | Asset | Purpose |
 |---|---|
-| `docs/assets/teleop-preview.png` | SpaceMouse/keyboard teleoperation in action |
-| `docs/assets/data-collection.png` | RealSense preview while collecting LeRobot episodes |
+| `docs/assets/teleop-preview.gif` | SpaceMouse/keyboard teleoperation in action |
+| `docs/assets/data-collection-preview.gif` | RealSense preview while collecting LeRobot episodes |
 | `docs/assets/dataset-player.png` | Dataset playback with HUD and multi-camera view |
 | `docs/assets/trajectory-analysis.png` | Joint/EE/gripper trajectory visualization |
 | `docs/assets/system-architecture.png` | Dual-machine architecture diagram |
 
 ## Architecture
+
+![Franka Control system architecture](docs/assets/system-architecture.png)
 
 ```text
 Algorithm / GPU machine                         Control / RT machine
@@ -197,6 +199,7 @@ python -m franka_control.scripts.measure_latency \
 ```bash
 python -m franka_control.scripts.teleop \
     --robot-ip 192.168.0.100 \
+    --gripper-host 192.168.0.100 \
     --device spacemouse \
     --action-scale-t 1.0 \
     --action-scale-r 2.5
@@ -207,6 +210,7 @@ python -m franka_control.scripts.teleop \
 ```bash
 python -m franka_control.scripts.collect_episodes \
     --robot-ip 192.168.0.100 \
+    --gripper-host 192.168.0.100 \
     --repo-id user/franka_pick \
     --root data/franka_pick \
     --task-name "pick red cube" \
@@ -282,6 +286,11 @@ More API examples: [`docs/api.md`](docs/api.md).
 - [Data Collection](docs/data_collection.md)
 - [Python API](docs/api.md)
 - [No-ROS Design and ROS Comparison](docs/ros_comparison.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Hardware Validation](docs/hardware_validation.md)
+- [Community Submission Notes](docs/community_submission.md)
+- [Roadmap](ROADMAP.md)
+- [Changelog](CHANGELOG.md)
 - [Chinese README](README.zh-CN.md)
 
 ## Safety and Limitations

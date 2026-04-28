@@ -1,0 +1,99 @@
+name: Hardware issue
+description: Report real robot, gripper, camera, teleop device, or safety-related failures.
+title: "[Hardware]: "
+labels:
+  - hardware
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Safety-critical reports are welcome. Do not retry unsafe motion just to collect more data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the failure and whether any robot motion occurred.
+    validations:
+      required: true
+  - type: dropdown
+    id: moved
+    attributes:
+      label: Did the robot move?
+      options:
+        - "No"
+        - "Yes, as expected"
+        - "Yes, unexpectedly"
+    validations:
+      required: true
+  - type: dropdown
+    id: estop
+    attributes:
+      label: Was emergency stop or external intervention needed?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
+  - type: input
+    id: robot
+    attributes:
+      label: Robot model
+      placeholder: Franka Research 3
+    validations:
+      required: true
+  - type: input
+    id: franka_version
+    attributes:
+      label: Franka system version
+      placeholder: Exact version from robot UI or Desk
+  - type: input
+    id: control_pc
+    attributes:
+      label: Control PC OS and kernel
+      placeholder: Ubuntu 22.04, PREEMPT_RT ...
+  - type: input
+    id: algorithm_pc
+    attributes:
+      label: Algorithm PC OS
+      placeholder: Ubuntu 22.04
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12"
+  - type: input
+    id: devices
+    attributes:
+      label: Cameras and teleop devices
+      placeholder: D435, D405, SpaceMouse Wireless, keyboard
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Full logs
+      render: text
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submit checks
+      options:
+        - label: I confirmed the emergency stop was reachable during the test.
+          required: true
+        - label: I included whether the robot moved and whether emergency stop was needed.
+          required: true
