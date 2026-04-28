@@ -135,6 +135,11 @@ The repository passes this section when GitHub Actions runs:
 - Markdown relative-link check.
 - Optional or staged `ruff` linting.
 
+Local status:
+
+- `[x]` Local offline checks passed before commit `f988044`.
+- `[ ]` GitHub Actions has passed on `origin/main`.
+
 Required local commands before release:
 
 ```bash

@@ -150,7 +150,8 @@ still blocked. Keep entries factual and short.
 
 ### Remaining
 
-- New files and edits are not committed yet.
+- Community-readiness batch committed locally as
+  `f988044 docs: add community readiness gates`.
 - GitHub Actions has not run on the remote repository yet.
 - Real hardware validation values are still pending FR3 access.
 - Real screenshots/GIFs are still missing.
@@ -169,6 +170,6 @@ still blocked. Keep entries factual and short.
 
 ## Next Recommended Iteration
 
-Commit and push the current community-readiness batch, then confirm GitHub
-Actions on `origin/main`. After CI is green, collect real FR3 validation values
-and capture the remaining README media assets.
+Push the current community-readiness batch, then confirm GitHub Actions on
+`origin/main`. After CI is green, collect real FR3 validation values and capture
+the remaining README media assets.

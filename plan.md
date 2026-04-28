@@ -18,6 +18,7 @@ As of 2026-04-28:
 - Phase 5 open-source hygiene files are complete locally.
 - Phase 6 demo media is partially complete: the architecture diagram exists,
   while real workflow screenshots/GIFs are still pending.
+- Community-readiness implementation is committed locally as `f988044`.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

@@ -33,7 +33,7 @@ As of 2026-04-28, the active focus is community-readiness polish before public
 release:
 
 - Missing docs, CI, GitHub issue templates, PR template, roadmap, and changelog
-  have been added locally.
+  have been added and committed locally.
 - The new-user quick start has been expanded into offline, control-PC, and
   algorithm-PC paths.
 - Remaining release blockers are real hardware validation, real demo media, CI
