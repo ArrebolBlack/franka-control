@@ -236,3 +236,18 @@ external artifacts are complete.
 - Issues `#1` and `#2` require real hardware/media work.
 - Issue `#3` waits on `#1` and `#2`.
 - Issue `#4` waits on the `v0.1.0` release and demo URL.
+
+## 2026-04-29: Hardware Validation Helper
+
+### Completed
+
+- Added `scripts/collect_validation_info.py` to collect machine, Python, git,
+  package-version, and optional RealSense details for
+  `docs/hardware_validation.md`.
+- Documented the helper in `docs/hardware_validation.md` and `docs/README.md`.
+- Added compile and `--help` smoke coverage for the helper in CI.
+
+### Remaining
+
+- The helper still needs to be run on the actual control PC and algorithm PC.
+- Real robot validation remains blocked on FR3 access.

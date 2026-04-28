@@ -34,6 +34,21 @@ These checks do not require robot hardware:
 | Markdown relative links | `python scripts/check_markdown_links.py` | Passing locally, pending GitHub CI |
 | Ruff correctness checks | `python -m ruff check franka_control scripts tests` | Passing locally, pending GitHub CI |
 
+Collect environment details on each machine and paste the relevant values into
+the table below:
+
+```bash
+python scripts/collect_validation_info.py --format markdown
+```
+
+On the algorithm PC, optionally include connected RealSense devices:
+
+```bash
+python scripts/collect_validation_info.py --format markdown --probe-realsense
+```
+
+This helper does not connect to the Franka robot.
+
 ## Hardware Checklist
 
 Record date, operator, and notes before marking any item complete.

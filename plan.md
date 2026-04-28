@@ -25,6 +25,7 @@ As of 2026-04-29:
   workflow moved to `actions/checkout@v6` and `actions/setup-python@v6`.
 - GitHub About description, topics, required labels, `v0.1.0` milestone, and
   release-blocker issues are configured.
+- Hardware validation helper script is added to reduce manual setup reporting.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

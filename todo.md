@@ -27,6 +27,7 @@ Status legend:
 - `[x]` GitHub Actions v6 upgrade completed and CI remains green.
 - `[x]` GitHub About description and topics are set.
 - `[x]` GitHub release-blocker milestone and issues are created.
+- `[x]` Hardware validation environment-info helper is added.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -97,6 +98,7 @@ Status legend:
 
 ## Phase 6: Hardware Validation
 
+- `[x]` Add helper to collect environment/package versions for validation.
 - `[ ]` Fill robot model and Franka system version.
 - `[ ]` Fill control PC OS and kernel.
 - `[ ]` Fill algorithm PC OS.

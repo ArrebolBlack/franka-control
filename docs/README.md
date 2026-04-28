@@ -34,3 +34,10 @@ Keep user-facing commands synchronized with the actual CLI `--help` output. If a
 script argument changes, update the README and the relevant docs page in the same
 change. Hardware-facing changes also need safety notes and, when validated, an
 update to [Hardware Validation](hardware_validation.md).
+
+Useful repository helpers:
+
+```bash
+python scripts/check_markdown_links.py
+python scripts/collect_validation_info.py --format markdown
+```

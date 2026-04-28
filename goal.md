@@ -38,6 +38,8 @@ release:
   algorithm-PC paths.
 - GitHub About, topics, labels, `v0.1.0` milestone, and release-blocker issues
   are configured.
+- A validation-info helper is available for collecting machine and dependency
+  details on the control PC and algorithm PC.
 - Remaining release blockers are real hardware validation, real demo media, and
   the `v0.1.0` GitHub release.
 

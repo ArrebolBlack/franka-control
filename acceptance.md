@@ -150,7 +150,7 @@ Required local commands before release:
 ```bash
 git diff --check
 python -m pytest tests -q
-python -m py_compile franka_control/scripts/collect_episodes.py franka_control/scripts/teleop.py franka_control/scripts/run_trajectory.py scripts/play_dataset.py scripts/check_markdown_links.py
+python -m py_compile franka_control/scripts/collect_episodes.py franka_control/scripts/teleop.py franka_control/scripts/run_trajectory.py scripts/play_dataset.py scripts/collect_validation_info.py scripts/check_markdown_links.py
 python -m franka_control.robot --help
 python -m franka_control.gripper --help
 python -m franka_control.scripts.teleop --help
@@ -159,6 +159,7 @@ python -m franka_control.scripts.collect_waypoints --help
 python -m franka_control.scripts.run_trajectory --help
 python -m franka_control.scripts.measure_latency --help
 python scripts/play_dataset.py --help
+python scripts/collect_validation_info.py --help
 python scripts/check_markdown_links.py
 python -m ruff check franka_control scripts tests
 ```
