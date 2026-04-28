@@ -139,6 +139,8 @@ Local status:
 
 - `[x]` Local offline checks passed before commit `f988044`.
 - `[ ]` GitHub Actions has passed on `origin/main`.
+- `[~]` First GitHub Actions run `25048732038` failed on Markdown links to
+  ignored local files; fix is in progress.
 
 Required local commands before release:
 

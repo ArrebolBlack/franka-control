@@ -152,7 +152,13 @@ still blocked. Keep entries factual and short.
 
 - Community-readiness batch committed locally as
   `f988044 docs: add community readiness gates`.
-- GitHub Actions has not run on the remote repository yet.
+- Memory update committed locally as
+  `372432a docs: record community readiness commit`.
+- Both commits were pushed to `origin/main`.
+- GitHub Actions run `25048732038` failed in the Markdown link check because
+  `docs/README.md` linked ignored local files that were not present on the
+  runner: `docs/com_estimation_algorithm.md` and `docs/solve_com.py`.
+- The ignored local-file links were removed from `docs/README.md`; rerun pending.
 - Real hardware validation values are still pending FR3 access.
 - Real screenshots/GIFs are still missing.
 - `docs/assets/system-architecture.png` exists, but teleop, data collection,
@@ -170,6 +176,6 @@ still blocked. Keep entries factual and short.
 
 ## Next Recommended Iteration
 
-Push the current community-readiness batch, then confirm GitHub Actions on
+Commit and push the Markdown-link CI fix, then confirm GitHub Actions on
 `origin/main`. After CI is green, collect real FR3 validation values and capture
 the remaining README media assets.

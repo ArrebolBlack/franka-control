@@ -27,8 +27,6 @@ These files are lower-level development notes and may be more implementation-ori
 | [Environment Design](env_design.md) | `FrankaEnv` design details |
 | [Implementation Plan](implementation_plan.md) | Historical implementation notes |
 | [Phase 4 Plan Draft](phase4_plan_draft.md) | Historical phase planning |
-| [COM Estimation Algorithm](com_estimation_algorithm.md) | Center-of-mass estimation notes |
-| [`solve_com.py`](solve_com.py) | COM solving helper script |
 
 ## Documentation Policy
 

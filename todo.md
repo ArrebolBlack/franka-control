@@ -22,7 +22,8 @@ Status legend:
 - `[x]` Community-readiness documentation is expanded.
 - `[x]` CI workflow is added locally.
 - `[x]` Community-readiness batch is committed locally.
-- `[ ]` Community-readiness batch is pushed to `origin/main`.
+- `[x]` Community-readiness batch is pushed to `origin/main`.
+- `[~]` GitHub Actions is being fixed after an initial Markdown-link failure.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -139,8 +140,11 @@ Recommended next implementation batch:
 
 1. Commit and push the community-readiness batch.
    - Local commit exists: `f988044 docs: add community readiness gates`.
-   - Push is still pending.
+   - Memory update commit exists: `372432a docs: record community readiness commit`.
+   - Both commits are pushed to `origin/main`.
 2. Confirm GitHub Actions passes on `origin/main`.
+   - First run `25048732038` failed due ignored local docs links.
+   - Markdown-link fix is pending commit and rerun.
 3. Capture final README media assets:
    - `docs/assets/teleop-preview.gif`
    - `docs/assets/data-collection-preview.gif`
