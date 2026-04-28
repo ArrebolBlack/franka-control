@@ -29,6 +29,8 @@ As of 2026-04-29:
 - GitHub Actions run `25071752853` passed after adding validation helper
   coverage.
 - Media capture runbook exists for the remaining real workflow screenshots/GIFs.
+- Release materials checklist exists to guide collection of hardware details,
+  validation evidence, media files, demo links, and submission inputs.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

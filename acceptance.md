@@ -14,6 +14,9 @@ As of 2026-04-29:
   algorithm-PC paths.
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: matrix exists, but real tested values are still pending.
+- Release materials checklist: exists and lists the remaining external
+  information, validation evidence, screenshots/GIFs, demo video, and submission
+  inputs.
 - CI and offline quality gates: workflow and local checks are configured; remote
   GitHub Actions run `25071752853` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
@@ -55,6 +58,7 @@ README or `docs/README.md`:
 - `docs/hardware_validation.md`
 - `docs/community_submission.md`
 - `docs/media_capture.md`
+- `docs/release_materials_checklist.md`
 - `docs/assets/README.md`
 - `ROADMAP.md`
 - `CHANGELOG.md`

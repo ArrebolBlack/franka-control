@@ -30,6 +30,7 @@ Status legend:
 - `[x]` Hardware validation environment-info helper is added.
 - `[x]` Hardware validation helper is covered by green CI.
 - `[x]` Media capture runbook is added.
+- `[x]` Release materials checklist is added.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -93,6 +94,7 @@ Status legend:
 
 - `[x]` Create `docs/assets/system-architecture.png`.
 - `[x]` Add media capture runbook.
+- `[x]` Add release materials checklist for hardware/media collection.
 - `[ ]` Record `docs/assets/teleop-preview.gif`.
 - `[ ]` Record `docs/assets/data-collection-preview.gif`.
 - `[ ]` Capture `docs/assets/dataset-player.png`.

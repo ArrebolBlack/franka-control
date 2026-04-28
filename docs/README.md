@@ -15,6 +15,7 @@ extending Franka Control.
 | [Hardware Validation](hardware_validation.md) | Real tested setup matrix and validation checklist |
 | [Community Submission](community_submission.md) | Franka Community description and email draft |
 | [Media Capture Runbook](media_capture.md) | Safe capture checklist for final README screenshots and GIFs |
+| [Release Materials Checklist](release_materials_checklist.md) | Chinese checklist for hardware info, validation evidence, media, and release inputs |
 | [Media Assets](assets/README.md) | Reserved screenshot and diagram filenames for the README |
 | [Roadmap](../ROADMAP.md) | Planned release direction and non-goals |
 | [Changelog](../CHANGELOG.md) | User-facing release notes |

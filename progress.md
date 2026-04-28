@@ -282,3 +282,24 @@ external artifacts are complete.
 ### Remaining
 
 - Actual media capture still requires real hardware and a safe lab scene.
+
+## 2026-04-29: Release Materials Checklist
+
+### Completed
+
+- Added `docs/release_materials_checklist.md` as a Chinese collection checklist
+  for:
+  - network and hardware baseline information,
+  - control PC and algorithm PC environment outputs,
+  - hardware validation evidence,
+  - README screenshots, GIFs, and optional demo video,
+  - release and Franka Community submission inputs.
+- Linked the checklist from `README.md`, `docs/README.md`, and
+  `docs/assets/README.md`.
+- Updated `goal.md`, `plan.md`, `acceptance.md`, and `todo.md` to record the
+  new external-materials checklist.
+
+### Remaining
+
+- The checklist still needs to be filled by running the real FR3 validation
+  workflow and capturing the requested media assets.

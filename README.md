@@ -291,6 +291,7 @@ More API examples: [`docs/api.md`](docs/api.md).
 - [Troubleshooting](docs/troubleshooting.md)
 - [Hardware Validation](docs/hardware_validation.md)
 - [Media Capture Runbook](docs/media_capture.md)
+- [Release Materials Checklist](docs/release_materials_checklist.md)
 - [Community Submission Notes](docs/community_submission.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)

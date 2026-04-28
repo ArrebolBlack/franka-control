@@ -18,4 +18,6 @@ Keep binary assets small enough for GitHub. Prefer compressed PNG or short GIF/M
 only when it materially improves the documentation.
 
 For the capture workflow and safety checklist, see
-[Media Capture Runbook](../media_capture.md).
+[Media Capture Runbook](../media_capture.md). For the full list of required
+hardware information, validation evidence, media, and release inputs, see
+[Release Materials Checklist](../release_materials_checklist.md).
