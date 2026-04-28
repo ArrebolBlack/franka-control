@@ -16,7 +16,7 @@ As of 2026-04-28:
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: matrix exists, but real tested values are still pending.
 - CI and offline quality gates: workflow and local checks are configured; remote
-  GitHub Actions status is pending.
+  GitHub Actions run `25048952721` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
 - Demo media: system architecture image exists; real workflow screenshots/GIFs
   are still pending.
@@ -138,9 +138,9 @@ The repository passes this section when GitHub Actions runs:
 Local status:
 
 - `[x]` Local offline checks passed before commit `f988044`.
-- `[ ]` GitHub Actions has passed on `origin/main`.
-- `[~]` First GitHub Actions run `25048732038` failed on Markdown links to
-  ignored local files; fix is in progress.
+- `[x]` GitHub Actions has passed on `origin/main`.
+- `[x]` First GitHub Actions run `25048732038` failed on Markdown links to
+  ignored local files; fixed by commit `b91d53a`.
 
 Required local commands before release:
 
@@ -223,7 +223,7 @@ Submit only if all are true:
 
 - `[ ]` README is polished and accurate.
 - `[x]` Docs are complete enough for a new user.
-- `[ ]` CI is green on GitHub.
+- `[x]` CI is green on GitHub.
 - `[ ]` Hardware validation is filled.
 - `[ ]` Demo media is available.
 - `[ ]` A release exists.

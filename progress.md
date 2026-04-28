@@ -158,7 +158,10 @@ still blocked. Keep entries factual and short.
 - GitHub Actions run `25048732038` failed in the Markdown link check because
   `docs/README.md` linked ignored local files that were not present on the
   runner: `docs/com_estimation_algorithm.md` and `docs/solve_com.py`.
-- The ignored local-file links were removed from `docs/README.md`; rerun pending.
+- The ignored local-file links were removed from `docs/README.md`.
+- Markdown-link fix committed and pushed as
+  `b91d53a docs: fix markdown links for ci`.
+- GitHub Actions run `25048952721` passed on `origin/main`.
 - Real hardware validation values are still pending FR3 access.
 - Real screenshots/GIFs are still missing.
 - `docs/assets/system-architecture.png` exists, but teleop, data collection,
@@ -176,6 +179,6 @@ still blocked. Keep entries factual and short.
 
 ## Next Recommended Iteration
 
-Commit and push the Markdown-link CI fix, then confirm GitHub Actions on
-`origin/main`. After CI is green, collect real FR3 validation values and capture
-the remaining README media assets.
+Commit and push the CI badge / status-memory update. After CI remains green,
+collect real FR3 validation values and capture the remaining README media
+assets.

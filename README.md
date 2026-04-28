@@ -1,5 +1,7 @@
 # Franka Control
 
+[![CI](https://github.com/ArrebolBlack/franka-control/actions/workflows/ci.yml/badge.svg)](https://github.com/ArrebolBlack/franka-control/actions/workflows/ci.yml)
+
 No-ROS, Python-native control and data collection toolkit for Franka Research 3.
 
 Franka Control is designed for embodied AI, imitation learning, reinforcement learning,

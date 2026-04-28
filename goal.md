@@ -36,8 +36,8 @@ release:
   have been added and committed locally.
 - The new-user quick start has been expanded into offline, control-PC, and
   algorithm-PC paths.
-- Remaining release blockers are real hardware validation, real demo media, CI
-  confirmation on GitHub, and the `v0.1.0` GitHub release.
+- Remaining release blockers are real hardware validation, real demo media, and
+  the `v0.1.0` GitHub release.
 
 Target community categories:
 

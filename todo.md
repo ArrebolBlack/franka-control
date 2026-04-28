@@ -23,7 +23,7 @@ Status legend:
 - `[x]` CI workflow is added locally.
 - `[x]` Community-readiness batch is committed locally.
 - `[x]` Community-readiness batch is pushed to `origin/main`.
-- `[~]` GitHub Actions is being fixed after an initial Markdown-link failure.
+- `[x]` GitHub Actions is green on `origin/main`.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -66,7 +66,7 @@ Status legend:
 - `[x]` Configure CLI `--help` smoke tests in CI.
 - `[x]` Add Markdown relative-link checker.
 - `[x]` Add limited `ruff` configuration.
-- `[ ]` Add CI badge to README after workflow is stable.
+- `[x]` Add CI badge to README after workflow is stable.
 
 ## Phase 4: GitHub Collaboration Files
 
@@ -144,7 +144,7 @@ Recommended next implementation batch:
    - Both commits are pushed to `origin/main`.
 2. Confirm GitHub Actions passes on `origin/main`.
    - First run `25048732038` failed due ignored local docs links.
-   - Markdown-link fix is pending commit and rerun.
+   - Markdown-link fix commit `b91d53a` passed in run `25048952721`.
 3. Capture final README media assets:
    - `docs/assets/teleop-preview.gif`
    - `docs/assets/data-collection-preview.gif`
