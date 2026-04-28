@@ -290,6 +290,7 @@ More API examples: [`docs/api.md`](docs/api.md).
 - [No-ROS Design and ROS Comparison](docs/ros_comparison.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Hardware Validation](docs/hardware_validation.md)
+- [Media Capture Runbook](docs/media_capture.md)
 - [Community Submission Notes](docs/community_submission.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)

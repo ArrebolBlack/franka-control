@@ -16,3 +16,6 @@ Recommended files before public release:
 
 Keep binary assets small enough for GitHub. Prefer compressed PNG or short GIF/MP4
 only when it materially improves the documentation.
+
+For the capture workflow and safety checklist, see
+[Media Capture Runbook](../media_capture.md).

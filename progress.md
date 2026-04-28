@@ -266,3 +266,19 @@ external artifacts are complete.
 
 - The helper still needs to be run on the actual control PC and algorithm PC.
 - Real robot validation remains blocked on FR3 access.
+
+## 2026-04-29: Media Capture Runbook
+
+### Completed
+
+- Added `docs/media_capture.md` with safe capture instructions for:
+  - `docs/assets/teleop-preview.gif`
+  - `docs/assets/data-collection-preview.gif`
+  - `docs/assets/dataset-player.png`
+  - `docs/assets/trajectory-analysis.png`
+- Linked the runbook from `README.md`, `docs/README.md`, and
+  `docs/assets/README.md`.
+
+### Remaining
+
+- Actual media capture still requires real hardware and a safe lab scene.

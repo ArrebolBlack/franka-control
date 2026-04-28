@@ -28,6 +28,7 @@ As of 2026-04-29:
 - Hardware validation helper script is added to reduce manual setup reporting.
 - GitHub Actions run `25071752853` passed after adding validation helper
   coverage.
+- Media capture runbook exists for the remaining real workflow screenshots/GIFs.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

@@ -54,6 +54,7 @@ README or `docs/README.md`:
 - `docs/troubleshooting.md`
 - `docs/hardware_validation.md`
 - `docs/community_submission.md`
+- `docs/media_capture.md`
 - `docs/assets/README.md`
 - `ROADMAP.md`
 - `CHANGELOG.md`
