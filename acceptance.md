@@ -16,7 +16,7 @@ As of 2026-04-28:
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: matrix exists, but real tested values are still pending.
 - CI and offline quality gates: workflow and local checks are configured; remote
-  GitHub Actions run `25048952721` passed on `origin/main`.
+  GitHub Actions run `25049184348` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
 - Demo media: system architecture image exists; real workflow screenshots/GIFs
   are still pending.
@@ -141,6 +141,8 @@ Local status:
 - `[x]` GitHub Actions has passed on `origin/main`.
 - `[x]` First GitHub Actions run `25048732038` failed on Markdown links to
   ignored local files; fixed by commit `b91d53a`.
+- `[~]` GitHub Actions v6 upgrade is in progress to remove the Node.js 20
+  deprecation warning.
 
 Required local commands before release:
 

@@ -162,6 +162,13 @@ still blocked. Keep entries factual and short.
 - Markdown-link fix committed and pushed as
   `b91d53a docs: fix markdown links for ci`.
 - GitHub Actions run `25048952721` passed on `origin/main`.
+- CI badge/status update committed and pushed as
+  `3490ac0 docs: record green ci status`.
+- GitHub Actions run `25049184348` passed on `origin/main`.
+- CI emitted a non-blocking Node.js 20 deprecation warning for
+  `actions/checkout@v4` and `actions/setup-python@v5`. Official releases show
+  `actions/checkout@v6.0.2` and `actions/setup-python@v6.2.0`; workflow upgrade
+  is in progress.
 - Real hardware validation values are still pending FR3 access.
 - Real screenshots/GIFs are still missing.
 - `docs/assets/system-architecture.png` exists, but teleop, data collection,
@@ -179,6 +186,6 @@ still blocked. Keep entries factual and short.
 
 ## Next Recommended Iteration
 
-Commit and push the CI badge / status-memory update. After CI remains green,
-collect real FR3 validation values and capture the remaining README media
-assets.
+Commit and push the GitHub Actions v6 upgrade, then confirm CI remains green.
+After CI remains green, collect real FR3 validation values and capture the
+remaining README media assets.

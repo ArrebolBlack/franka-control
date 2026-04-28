@@ -24,6 +24,7 @@ Status legend:
 - `[x]` Community-readiness batch is committed locally.
 - `[x]` Community-readiness batch is pushed to `origin/main`.
 - `[x]` GitHub Actions is green on `origin/main`.
+- `[~]` GitHub Actions v6 upgrade is in progress to remove Node.js 20 warnings.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -67,6 +68,7 @@ Status legend:
 - `[x]` Add Markdown relative-link checker.
 - `[x]` Add limited `ruff` configuration.
 - `[x]` Add CI badge to README after workflow is stable.
+- `[~]` Upgrade GitHub Actions to Node.js 24-compatible major versions.
 
 ## Phase 4: GitHub Collaboration Files
 
@@ -145,6 +147,8 @@ Recommended next implementation batch:
 2. Confirm GitHub Actions passes on `origin/main`.
    - First run `25048732038` failed due ignored local docs links.
    - Markdown-link fix commit `b91d53a` passed in run `25048952721`.
+   - CI badge/status commit `3490ac0` passed in run `25049184348`.
+   - Actions v6 upgrade is pending commit and rerun.
 3. Capture final README media assets:
    - `docs/assets/teleop-preview.gif`
    - `docs/assets/data-collection-preview.gif`
