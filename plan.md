@@ -8,7 +8,7 @@ Franka Research 3 user can understand, install, run, verify, and trust.
 
 ## Current Status
 
-As of 2026-04-28:
+As of 2026-04-29:
 
 - Phase 1 documentation foundation is complete.
 - Phase 2 quick-start expansion is complete locally.
@@ -23,6 +23,8 @@ As of 2026-04-28:
   in `docs/README.md`.
 - GitHub Actions v6 upgrade is complete; run `25049362136` passed after the
   workflow moved to `actions/checkout@v6` and `actions/setup-python@v6`.
+- GitHub About description, topics, required labels, `v0.1.0` milestone, and
+  release-blocker issues are configured.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

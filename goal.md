@@ -29,13 +29,15 @@ Submit the project to Franka Community after the repository has:
 
 ## Current Execution Focus
 
-As of 2026-04-28, the active focus is community-readiness polish before public
+As of 2026-04-29, the active focus is community-readiness polish before public
 release:
 
 - Missing docs, CI, GitHub issue templates, PR template, roadmap, and changelog
   have been added and committed locally.
 - The new-user quick start has been expanded into offline, control-PC, and
   algorithm-PC paths.
+- GitHub About, topics, labels, `v0.1.0` milestone, and release-blocker issues
+  are configured.
 - Remaining release blockers are real hardware validation, real demo media, and
   the `v0.1.0` GitHub release.
 

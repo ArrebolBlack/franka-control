@@ -191,3 +191,48 @@ still blocked. Keep entries factual and short.
 Collect real FR3 validation values and capture the remaining README media
 assets. Release and Franka Community submission remain blocked until those
 external artifacts are complete.
+
+## 2026-04-29: GitHub Repository Metadata and Release Tracking
+
+### Completed
+
+- Updated GitHub About description to:
+  `No-ROS Python stack for Franka Research 3 control, teleoperation, trajectory planning, IK, RealSense, and LeRobot data collection.`
+- Added GitHub topics:
+  - `franka`
+  - `franka-research-3`
+  - `robot-control`
+  - `robotics`
+  - `teleoperation`
+  - `motion-planning`
+  - `inverse-kinematics`
+  - `gymnasium`
+  - `realsense`
+  - `lerobot`
+  - `imitation-learning`
+  - `reinforcement-learning`
+  - `no-ros`
+- Added GitHub labels:
+  - `hardware`
+  - `safety`
+  - `data`
+  - `docs`
+  - `needs validation`
+- Created GitHub milestone `v0.1.0`.
+- Created release-blocker issues:
+  - `#1` Capture README demo media assets.
+  - `#2` Fill hardware validation matrix for FR3 setup.
+  - `#3` Prepare v0.1.0 release.
+  - `#4` Finalize Franka Community submission.
+
+### Validation
+
+- `gh repo view` confirmed About description and topics.
+- `gh label list` confirmed required labels.
+- `gh issue list` confirmed the four open milestone issues.
+
+### Remaining
+
+- Issues `#1` and `#2` require real hardware/media work.
+- Issue `#3` waits on `#1` and `#2`.
+- Issue `#4` waits on the `v0.1.0` release and demo URL.

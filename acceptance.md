@@ -5,10 +5,9 @@ ready for Franka Community submission.
 
 ## Current Acceptance Status
 
-As of 2026-04-28:
+As of 2026-04-29:
 
-- Repository identity: mostly complete locally; GitHub About text still needs to
-  be set in the GitHub UI.
+- Repository identity: complete; GitHub About description and topics are set.
 - Documentation completeness: required files exist locally and are linked from
   README or `docs/README.md`.
 - New-user quick start: complete locally with offline, control-PC, and
@@ -18,6 +17,8 @@ As of 2026-04-28:
 - CI and offline quality gates: workflow and local checks are configured; remote
   GitHub Actions run `25049362136` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
+- GitHub triage setup: required labels, `v0.1.0` milestone, and release-blocker
+  issues exist.
 - Demo media: system architecture image exists; real workflow screenshots/GIFs
   are still pending.
 - Release readiness: blocked until hardware validation, demo media, and the
@@ -177,6 +178,12 @@ The repository passes this section when:
 - User-facing changes require docs updates.
 - Hardware-facing changes require safety notes.
 
+GitHub tracking status:
+
+- `[x]` Required labels exist.
+- `[x]` Milestone `v0.1.0` exists.
+- `[x]` Release-blocker issues `#1` through `#4` exist.
+
 ## 8. Demo Media
 
 The repository passes this section when README includes or links to:
@@ -229,6 +236,6 @@ Submit only if all are true:
 - `[ ]` Hardware validation is filled.
 - `[ ]` Demo media is available.
 - `[ ]` A release exists.
-- `[ ]` The project does not overclaim official Franka support.
-- `[ ]` The project clearly explains no-ROS scope and ROS relationship.
-- `[ ]` Safety limitations are explicit.
+- `[x]` The project does not overclaim official Franka support.
+- `[x]` The project clearly explains no-ROS scope and ROS relationship.
+- `[x]` Safety limitations are explicit.

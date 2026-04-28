@@ -25,6 +25,8 @@ Status legend:
 - `[x]` Community-readiness batch is pushed to `origin/main`.
 - `[x]` GitHub Actions is green on `origin/main`.
 - `[x]` GitHub Actions v6 upgrade completed and CI remains green.
+- `[x]` GitHub About description and topics are set.
+- `[x]` GitHub release-blocker milestone and issues are created.
 - `[~]` Hardware validation matrix exists but real tested values are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
@@ -76,7 +78,7 @@ Status legend:
 - `[x]` Add `.github/ISSUE_TEMPLATE/hardware_issue.yml`.
 - `[x]` Add `.github/ISSUE_TEMPLATE/feature_request.yml`.
 - `[x]` Add `.github/pull_request_template.md`.
-- `[ ]` Add labels if maintaining manually on GitHub:
+- `[x]` Add labels if maintaining manually on GitHub:
   - `hardware`
   - `safety`
   - `data`
@@ -116,6 +118,9 @@ Status legend:
 ## Phase 7: Release
 
 - `[ ]` Finalize `CHANGELOG.md`.
+- `[x]` Create GitHub milestone `v0.1.0`.
+- `[x]` Create release-blocker issues for media, hardware validation, release,
+  and Franka Community submission.
 - `[ ]` Confirm all tests pass.
 - `[ ]` Confirm all docs links pass.
 - `[ ]` Confirm hardware validation table is filled.
@@ -140,11 +145,13 @@ Status legend:
 
 Recommended next implementation batch:
 
-1. Capture final README media assets:
+1. Complete issue `#1`: capture final README media assets:
    - `docs/assets/teleop-preview.gif`
    - `docs/assets/data-collection-preview.gif`
    - `docs/assets/dataset-player.png`
    - `docs/assets/trajectory-analysis.png`
-2. Fill `docs/hardware_validation.md` with real tested FR3 values.
-3. Finalize `CHANGELOG.md` for `v0.1.0`.
-4. Create the `v0.1.0` release after media and hardware validation are ready.
+2. Complete issue `#2`: fill `docs/hardware_validation.md` with real tested FR3
+   values.
+3. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
+   release after media and hardware validation are ready.
+4. Complete issue `#4`: finalize Franka Community submission after release.
