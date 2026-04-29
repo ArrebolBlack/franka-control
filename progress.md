@@ -931,3 +931,34 @@ Run the final local checks before committing and publishing `v0.1.0`.
 - Commit and push the release-readiness changes.
 - Tag and publish `v0.1.0`.
 - Create a GitHub Release and let CI run on the pushed commit/tag.
+
+## 2026-04-30: README Demo Media Rendering Fix
+
+### Current Subtask
+
+Correctly use the release demo videos and screenshots in the README before
+publishing `v0.1.0`.
+
+### This Round's Method
+
+- Paused the tag/release step after the user reported that demo media was not
+  being used correctly in `README.md`.
+- Reviewed the existing `README.md` media section and `docs/assets/` contents.
+- Attempted to inspect/generate video thumbnails, but the current environment
+  does not have `cv2`, `ffmpeg`, or `ffprobe` available.
+- Updated `README.md` to show:
+  - keyboard teleoperation MP4 with video controls and fallback link;
+  - SpaceMouse teleoperation MP4 with video controls and fallback link;
+  - dataset playback MP4 with video controls and fallback link;
+  - trajectory and action-distribution screenshots as embedded images.
+
+### Remaining
+
+- Commit and push this README media fix before tagging `v0.1.0`.
+
+### Validation
+
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+- GitHub Actions run `25139136138` for the previous release-readiness commit
+  passed before this README media fix was committed.

@@ -44,18 +44,42 @@ controllers, or MoveIt at runtime.
 This project complements ROS-based stacks. It is best suited when you want a small
 Python API, rapid embodied AI iteration, and direct integration with learning pipelines.
 
-## Screenshots and Media
+## Demos and Screenshots
 
-Release media is stored under [`docs/assets/`](docs/assets/README.md). Videos
-are linked rather than auto-embedded so the README stays lightweight.
+Release media is stored under [`docs/assets/`](docs/assets/README.md). If your
+Markdown renderer does not show video controls, use the MP4 links below each
+demo.
 
-| Workflow | Asset | Purpose |
-|---|---|
-| Keyboard teleoperation | [Install gear demo](docs/assets/keyboard-teleop-install-gear.mp4) | Precise keyboard control on a gear insertion task |
-| SpaceMouse teleoperation | [Pouring demo](docs/assets/spacemouse-teleop-pouring.mp4) | Continuous 6-DoF SpaceMouse control |
-| Dataset playback | [Fruit basket playback](docs/assets/dataset-player-fruit-basket.mp4) | Playback of a collected LeRobot episode |
-| Dataset analysis | [Trajectory](docs/assets/trajectory-analysis.png), [action distribution](docs/assets/action-distribution.png) | Post-collection trajectory and action inspection |
-| Architecture | [System diagram](docs/assets/system-architecture.png) | Dual-machine ZMQ architecture |
+<table>
+  <tr>
+    <td width="50%">
+      <strong>Keyboard teleoperation: gear insertion</strong><br>
+      <video src="docs/assets/keyboard-teleop-install-gear.mp4" controls muted width="100%"></video><br>
+      <a href="docs/assets/keyboard-teleop-install-gear.mp4">Open MP4</a>
+    </td>
+    <td width="50%">
+      <strong>SpaceMouse teleoperation: pouring</strong><br>
+      <video src="docs/assets/spacemouse-teleop-pouring.mp4" controls muted width="100%"></video><br>
+      <a href="docs/assets/spacemouse-teleop-pouring.mp4">Open MP4</a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Dataset playback: fruit basket episode</strong><br>
+      <video src="docs/assets/dataset-player-fruit-basket.mp4" controls muted width="100%"></video><br>
+      <a href="docs/assets/dataset-player-fruit-basket.mp4">Open MP4</a>
+    </td>
+    <td width="50%">
+      <strong>Dataset analysis outputs</strong><br>
+      <a href="docs/assets/trajectory-analysis.png">
+        <img src="docs/assets/trajectory-analysis.png" alt="Trajectory visualization from a collected Franka dataset" width="49%">
+      </a>
+      <a href="docs/assets/action-distribution.png">
+        <img src="docs/assets/action-distribution.png" alt="Action distribution visualization from a collected Franka dataset" width="49%">
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## Architecture
 
