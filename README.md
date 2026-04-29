@@ -71,20 +71,25 @@ higher-quality MP4 recording.
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
+    <td colspan="2" valign="top">
       <strong>Dataset playback: fruit basket episode</strong><br>
       <a href="docs/assets/dataset-player-fruit-basket.mp4">
         <img src="docs/assets/dataset-player-fruit-basket.gif" alt="Dataset player demo for a fruit basket episode" width="100%">
       </a><br>
       <a href="docs/assets/dataset-player-fruit-basket.mp4">Full video (MP4)</a>
     </td>
+  </tr>
+  <tr>
     <td width="50%" valign="top">
-      <strong>Dataset analysis outputs</strong><br>
+      <strong>Trajectory visualization</strong><br>
       <a href="docs/assets/trajectory-analysis.png">
-        <img src="docs/assets/trajectory-analysis.png" alt="Trajectory visualization from a collected Franka dataset" width="49%">
+        <img src="docs/assets/trajectory-analysis.png" alt="Trajectory visualization from a collected Franka dataset" width="100%">
       </a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>Action distribution</strong><br>
       <a href="docs/assets/action-distribution.png">
-        <img src="docs/assets/action-distribution.png" alt="Action distribution visualization from a collected Franka dataset" width="49%">
+        <img src="docs/assets/action-distribution.png" alt="Action distribution visualization from a collected Franka dataset" width="100%">
       </a>
     </td>
   </tr>
