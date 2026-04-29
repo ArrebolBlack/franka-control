@@ -46,16 +46,16 @@ Python API, rapid embodied AI iteration, and direct integration with learning pi
 
 ## Screenshots and Media
 
-Screenshot slots are reserved under [`docs/assets/`](docs/assets/README.md). Suggested
-media before public release:
+Release media is stored under [`docs/assets/`](docs/assets/README.md). Videos
+are linked rather than auto-embedded so the README stays lightweight.
 
-| Asset | Purpose |
+| Workflow | Asset | Purpose |
 |---|---|
-| `docs/assets/teleop-preview.gif` | SpaceMouse/keyboard teleoperation in action |
-| `docs/assets/data-collection-preview.gif` | RealSense preview while collecting LeRobot episodes |
-| `docs/assets/dataset-player.png` | Dataset playback with HUD and multi-camera view |
-| `docs/assets/trajectory-analysis.png` | Joint/EE/gripper trajectory visualization |
-| `docs/assets/system-architecture.png` | Dual-machine architecture diagram |
+| Keyboard teleoperation | [Install gear demo](docs/assets/keyboard-teleop-install-gear.mp4) | Precise keyboard control on a gear insertion task |
+| SpaceMouse teleoperation | [Pouring demo](docs/assets/spacemouse-teleop-pouring.mp4) | Continuous 6-DoF SpaceMouse control |
+| Dataset playback | [Fruit basket playback](docs/assets/dataset-player-fruit-basket.mp4) | Playback of a collected LeRobot episode |
+| Dataset analysis | [Trajectory](docs/assets/trajectory-analysis.png), [action distribution](docs/assets/action-distribution.png) | Post-collection trajectory and action inspection |
+| Architecture | [System diagram](docs/assets/system-architecture.png) | Dual-machine ZMQ architecture |
 
 ## Architecture
 

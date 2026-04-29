@@ -17,8 +17,9 @@ As of 2026-04-29:
   camera-frame validation are recorded.
 - Phase 4 CI and quality gates are configured locally.
 - Phase 5 open-source hygiene files are complete locally.
-- Phase 6 demo media is partially complete: the architecture diagram exists,
-  while real workflow screenshots/GIFs are still pending.
+- Phase 6 demo media is complete locally: the architecture diagram, keyboard
+  teleop video, SpaceMouse teleop video, dataset playback video, trajectory
+  figure, and action distribution figure exist.
 - Community-readiness implementation is committed locally as `f988044`.
 - GitHub Actions is green on `origin/main` after fixing ignored local-file links
   in `docs/README.md`.
@@ -29,15 +30,16 @@ As of 2026-04-29:
 - Hardware validation helper script is added to reduce manual setup reporting.
 - GitHub Actions run `25071752853` passed after adding validation helper
   coverage.
-- Media capture runbook exists for the remaining real workflow screenshots/GIFs.
+- Media capture runbook is updated with the final README video and figure asset
+  set.
 - Release materials checklist exists to guide collection of hardware details,
   validation evidence, media files, demo links, and submission inputs.
 - Initial real setup/environment values are recorded in
   `docs/hardware_validation.md`.
 - Core hardware workflow results are recorded, including blocking-gripper
-  camera-frame validation; real workflow screenshots/GIFs are still pending.
+  camera-frame validation.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
-  demo media, final public redaction, and GitHub release steps are complete.
+  final public redaction and GitHub release steps are complete.
 
 ## 1. Project Positioning
 
@@ -125,10 +127,11 @@ complete.
 
 - README includes or links to:
   - System architecture diagram.
-  - Teleoperation GIF or screenshot.
-  - Data collection preview GIF or screenshot.
-  - Dataset player screenshot.
-  - Trajectory/action analysis screenshot.
+  - Keyboard teleoperation video.
+  - SpaceMouse teleoperation video.
+  - Dataset playback video.
+  - Trajectory analysis figure.
+  - Action distribution figure.
 
 ### Engineering Quality
 
@@ -409,10 +412,11 @@ Store under `docs/assets/`:
 | File | Purpose |
 |---|---|
 | `system-architecture.png` | Dual-machine ZMQ architecture |
-| `teleop-preview.gif` | Keyboard or SpaceMouse teleop demo |
-| `data-collection-preview.gif` | RealSense preview during episode collection |
-| `dataset-player.png` | Dataset player with HUD |
+| `keyboard-teleop-install-gear.mp4` | Keyboard teleop demo |
+| `spacemouse-teleop-pouring.mp4` | SpaceMouse teleop demo |
+| `dataset-player-fruit-basket.mp4` | Dataset playback demo |
 | `trajectory-analysis.png` | Joint/EE/gripper trajectory visualization |
+| `action-distribution.png` | Action distribution visualization |
 
 ### Guidelines
 

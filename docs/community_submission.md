@@ -24,7 +24,7 @@ dataset playback and analysis.
 |---|---|
 | Repository | `https://github.com/ArrebolBlack/franka-control` |
 | Release | `TBD after v0.1.0 release` |
-| Demo media | `TBD after screenshots/GIFs are captured` |
+| Demo media | `docs/assets/keyboard-teleop-install-gear.mp4`, `docs/assets/spacemouse-teleop-pouring.mp4`, `docs/assets/dataset-player-fruit-basket.mp4` |
 | Hardware validation | `docs/hardware_validation.md` |
 
 ## Submission Email Draft
@@ -69,6 +69,6 @@ Best regards,
 
 - `[ ]` CI is green on the public repository.
 - `[ ]` `docs/hardware_validation.md` is filled with real tested values.
-- `[ ]` README links to real demo media.
+- `[x]` README links to real demo media.
 - `[ ]` `CHANGELOG.md` is finalized for `v0.1.0`.
 - `[ ]` GitHub release `v0.1.0` exists.

@@ -395,3 +395,28 @@ external artifacts are complete.
   hostname, filesystem path, and camera serial details.
 - Re-run the environment helper after both machines are synchronized to the same
   release commit.
+
+## 2026-04-29: README Demo Media Assets
+
+### Completed
+
+- Added final README media assets under `docs/assets/`:
+  - `keyboard-teleop-install-gear.mp4`
+  - `spacemouse-teleop-pouring.mp4`
+  - `dataset-player-fruit-basket.mp4`
+  - `trajectory-analysis.png`
+  - `action-distribution.png`
+- Updated `README.md` to link keyboard teleoperation, SpaceMouse teleoperation,
+  dataset playback, trajectory analysis, action distribution, and architecture
+  assets.
+- Updated `docs/assets/README.md`, `docs/media_capture.md`,
+  `docs/release_materials_checklist.md`, `docs/community_submission.md`,
+  `acceptance.md`, `todo.md`, `goal.md`, and `plan.md` for the new media plan.
+- Dropped `data-collection-preview.gif` from the required `v0.1.0` media set;
+  it remains optional because dataset playback and hardware validation already
+  demonstrate camera-backed collection.
+
+### Remaining
+
+- Confirm README media links render correctly on GitHub, then close issue `#1`.
+- Final release still needs public redaction and release creation.

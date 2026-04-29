@@ -9,14 +9,21 @@ reachable, and the first motion is low-speed.
 | Asset | Source workflow | Status |
 |---|---|---|
 | `docs/assets/system-architecture.png` | Generated architecture diagram | Complete |
-| `docs/assets/teleop-preview.gif` | Keyboard or SpaceMouse teleoperation | Pending real capture |
-| `docs/assets/data-collection-preview.gif` | Live collection preview with RealSense | Pending real capture |
-| `docs/assets/dataset-player.png` | `scripts/play_dataset.py` playback window | Pending real capture |
-| `docs/assets/trajectory-analysis.png` | Dataset trajectory/action plot | Pending real capture |
+| `docs/assets/keyboard-teleop-install-gear.mp4` | Keyboard teleoperation, gear insertion task | Complete |
+| `docs/assets/spacemouse-teleop-pouring.mp4` | SpaceMouse teleoperation, pouring task | Complete |
+| `docs/assets/dataset-player-fruit-basket.mp4` | `scripts/play_dataset.py` playback of fruit basket task | Complete |
+| `docs/assets/trajectory-analysis.png` | Dataset trajectory plot from player key `v` | Complete |
+| `docs/assets/action-distribution.png` | Dataset action distribution plot from player key `a` | Complete |
+
+Optional:
+
+| Asset | Source workflow | Status |
+|---|---|---|
+| `docs/assets/data-collection-preview.gif` | Live OpenCV collection preview | Optional, not required for `v0.1.0` |
 
 ## General Rules
 
-- Keep GIFs short: 5-15 seconds.
+- Keep videos short and focused.
 - Use low-speed motion and a clear workspace.
 - Avoid showing faces, lab whiteboards, private network details, or unrelated
   equipment labels.
@@ -24,9 +31,21 @@ reachable, and the first motion is low-speed.
 - Use stable filenames exactly as listed above so README links stay simple.
 - Review each asset before committing it.
 
-## Teleop Preview GIF
+## Keyboard Teleoperation Video
 
-Run a low-speed teleop session from the algorithm PC:
+Use the keyboard teleoperation gear insertion demo:
+
+```text
+docs/assets/keyboard-teleop-install-gear.mp4
+```
+
+Acceptance:
+
+- The gear insertion task is visible.
+- The clip demonstrates controlled, low-speed keyboard teleoperation.
+- No unsafe or high-speed motion is shown.
+
+Reference command:
 
 ```bash
 python -m franka_control.scripts.teleop \
@@ -38,20 +57,76 @@ python -m franka_control.scripts.teleop \
     --hz 50
 ```
 
-Capture a short clip showing controlled, low-speed end-effector motion. Save it
-as:
+## SpaceMouse Teleoperation Video
+
+Use the SpaceMouse pouring demo:
 
 ```text
-docs/assets/teleop-preview.gif
+docs/assets/spacemouse-teleop-pouring.mp4
 ```
 
 Acceptance:
 
-- Motion direction is understandable.
+- The pouring task is visible.
+- The clip demonstrates continuous 6-DoF SpaceMouse control.
 - No unsafe or high-speed motion is shown.
-- The robot and end-effector are visible.
 
-## Data Collection Preview GIF
+Reference command:
+
+```bash
+python -m franka_control.scripts.teleop \
+    --robot-ip 192.168.0.100 \
+    --gripper-host 192.168.0.100 \
+    --device spacemouse \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --hz 50
+```
+
+## Dataset Playback Video
+
+Use the dataset player recording:
+
+```text
+docs/assets/dataset-player-fruit-basket.mp4
+```
+
+Acceptance:
+
+- The player output shows the fruit basket task.
+- Camera views and playback HUD/text are readable enough to identify that the
+  clip is post-collection dataset playback.
+- The clip does not reveal sensitive lab context.
+
+Reference command:
+
+```bash
+python scripts/play_dataset.py \
+    --repo-id test/franka_media \
+    --root data/franka_media
+```
+
+## Analysis Figures
+
+The dataset player analysis controls produce:
+
+```text
+docs/assets/trajectory-analysis.png
+docs/assets/action-distribution.png
+```
+
+Controls:
+
+- `v` for trajectory visualization.
+- `a` for action distribution.
+- `i` for action statistics in the terminal.
+
+Acceptance:
+
+- Axis labels and plotted data are readable.
+- The figures correspond to a real collected dataset.
+
+## Optional Collection Preview
 
 Run one short collection session with cameras:
 
@@ -72,7 +147,10 @@ python -m franka_control.scripts.collect_episodes \
     --display auto
 ```
 
-Capture the OpenCV preview window during preview or recording. Save it as:
+Capture the OpenCV preview window during preview or recording only if a live
+collection preview is needed. This asset is optional for `v0.1.0` because the
+dataset playback video and hardware validation record already demonstrate
+camera-backed collection.
 
 ```text
 docs/assets/data-collection-preview.gif
@@ -83,47 +161,6 @@ Acceptance:
 - At least one camera feed is visible.
 - The `PREVIEW` or `RECORDING` overlay is readable.
 - The clip does not reveal sensitive lab context.
-
-## Dataset Player Screenshot
-
-Open the collected dataset:
-
-```bash
-python scripts/play_dataset.py \
-    --repo-id test/franka_media \
-    --root data/franka_media
-```
-
-Capture a screenshot of the player window and save it as:
-
-```text
-docs/assets/dataset-player.png
-```
-
-Acceptance:
-
-- The HUD and camera layout are readable.
-- The selected frame is representative and not blurred.
-
-## Trajectory and Action Analysis Screenshot
-
-In the dataset player, use the visualization controls:
-
-- `v` for trajectory visualization.
-- `a` for action distribution.
-- `i` for action statistics in the terminal.
-
-Capture either the trajectory visualization or action distribution figure and
-save it as:
-
-```text
-docs/assets/trajectory-analysis.png
-```
-
-Acceptance:
-
-- Axis labels and plotted data are readable.
-- The plot corresponds to the same real validation dataset.
 
 ## Recommended Final Check
 

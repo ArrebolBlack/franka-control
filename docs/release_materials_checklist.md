@@ -67,10 +67,12 @@
 | 需要什么 | 为什么需要 | 我该如何获得 |
 |---|---|---|
 | `docs/assets/system-architecture.png` 最终确认 | 架构图已存在，但发布前需要确认它仍符合真实双机部署。 | 打开图片检查 IP/端口概念是否与真实部署一致；如果一致，无需重录。 |
-| `docs/assets/teleop-preview.gif` | README 需要展示机器人被 keyboard 或 SpaceMouse 安全控制的真实效果。 | 按 `docs/media_capture.md` 的 Teleop Preview GIF 步骤运行低速 teleop，录制 5-15 秒，裁剪到机器人和末端执行器可见。 |
-| `docs/assets/data-collection-preview.gif` | 展示 RealSense 预览和 LeRobot episode 采集流程，是数据功能的核心视觉证据。 | 按 `docs/media_capture.md` 的 Data Collection Preview GIF 步骤运行一集短采集，录制 OpenCV preview 窗口，确保 `PREVIEW` 或 `RECORDING` 字样可读。 |
-| `docs/assets/dataset-player.png` | 证明采集完成后可以用 dataset player 检查数据。 | 运行 `python scripts/play_dataset.py --repo-id test/franka_media --root data/franka_media`，截取 HUD 和多相机布局清晰的一帧。 |
-| `docs/assets/trajectory-analysis.png` | 证明数据集分析和轨迹可视化可用。 | 在 dataset player 中按 `v` 查看 trajectory 或按 `a` 查看 action distribution，截取轴标签和曲线清晰的窗口。 |
+| `docs/assets/keyboard-teleop-install-gear.mp4` | README 需要展示 keyboard 遥操作可以完成精密装配任务。 | 已采集键盘遥操作安装齿轮 demo；发布前检查画面不包含敏感信息。 |
+| `docs/assets/spacemouse-teleop-pouring.mp4` | README 需要展示 SpaceMouse 连续 6-DoF 遥操作能力。 | 已采集 SpaceMouse 倒水 demo；发布前检查画面不包含敏感信息。 |
+| `docs/assets/dataset-player-fruit-basket.mp4` | 证明采集完成后可以用 dataset player 回放真实 LeRobot 数据集。 | 已采集水果放入篮子的 dataset playback demo；确认 HUD/播放信息可读。 |
+| `docs/assets/trajectory-analysis.png` | 证明数据集轨迹可视化可用。 | 已用 dataset player 的 `v` 控制生成 trajectory figure。 |
+| `docs/assets/action-distribution.png` | 证明数据集 action distribution 分析可用。 | 已用 dataset player 的 `a` 控制生成 action distribution figure。 |
+| 可选 `docs/assets/data-collection-preview.gif` | 实时 OpenCV preview 可以展示采集过程，但信息量低于 dataset playback。 | 非 `v0.1.0` 必需项；如后续补充，只录预览窗口并避免敏感信息。 |
 | 可选 `docs/assets/waypoint-route.png` | waypoint/trajectory 工作流如果要在 README 中突出展示，需要路线图或界面截图。 | 完成 waypoint collection 后截取路线/可视化结果；如果没有清晰画面，可以不作为 v0.1.0 必需项。 |
 | 可选公开视频 demo URL | Franka Community 提交通常比单个 GIF 更适合引用一个完整 demo 链接。 | 录制 30-90 秒横屏视频，内容包括 teleop、采集预览、dataset player。上传到 GitHub Release、YouTube、Bilibili 或实验室可公开链接，确认无需登录即可访问。 |
 | 可选本地 demo MP4 | 如果暂时不上传公开视频，GitHub Release 可附加 MP4。 | 使用 OBS、系统录屏或手机三脚架录制；文件名建议 `franka-control-v0.1.0-demo.mp4`，发布前检查声音、画面和隐私信息。 |
@@ -102,7 +104,8 @@
 8. 再用相同速度限制采集一集 `--no-camera` 数据，隔离验证 robot/action
    写入链路。
 9. 打开 dataset player，截取 dataset player 和 trajectory/action analysis 图片。
-10. 录制 teleop GIF、data collection GIF，以及可选完整 demo 视频。
+10. 放入 keyboard teleop、SpaceMouse teleop、dataset playback 视频和
+    trajectory/action analysis 图片。
 11. 回填 `docs/hardware_validation.md`，放入 `docs/assets/`，更新 README 媒体区。
 12. 跑最终检查后创建 release，再准备 Franka Community 提交。
 
@@ -111,10 +114,12 @@
 | 资料类型 | 放置位置 |
 |---|---|
 | 硬件矩阵、验证 checklist、日期、操作者、命令输出摘要 | `docs/hardware_validation.md` |
-| teleop GIF | `docs/assets/teleop-preview.gif` |
-| data collection GIF | `docs/assets/data-collection-preview.gif` |
-| dataset player 截图 | `docs/assets/dataset-player.png` |
-| trajectory/action analysis 截图 | `docs/assets/trajectory-analysis.png` |
+| keyboard teleop 视频 | `docs/assets/keyboard-teleop-install-gear.mp4` |
+| SpaceMouse teleop 视频 | `docs/assets/spacemouse-teleop-pouring.mp4` |
+| dataset player 视频 | `docs/assets/dataset-player-fruit-basket.mp4` |
+| trajectory figure | `docs/assets/trajectory-analysis.png` |
+| action distribution figure | `docs/assets/action-distribution.png` |
+| 可选 data collection preview GIF | `docs/assets/data-collection-preview.gif` |
 | 可选 waypoint/route 截图 | `docs/assets/waypoint-route.png` |
 | 可选完整 demo 视频 | GitHub Release 附件或公开视频 URL |
 | release notes | `CHANGELOG.md` 和 GitHub Release 页面 |

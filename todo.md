@@ -34,7 +34,7 @@ Status legend:
 - `[x]` Release materials checklist is added.
 - `[x]` Hardware validation matrix has real setup/environment values and
   functional workflow results.
-- `[ ]` Real screenshots/GIFs are not added yet.
+- `[x]` README demo media assets are added.
 - `[ ]` GitHub release is not created yet.
 - `[ ]` Franka Community submission has not been sent yet.
 
@@ -97,11 +97,12 @@ Status legend:
 - `[x]` Create `docs/assets/system-architecture.png`.
 - `[x]` Add media capture runbook.
 - `[x]` Add release materials checklist for hardware/media collection.
-- `[ ]` Record `docs/assets/teleop-preview.gif`.
-- `[ ]` Record `docs/assets/data-collection-preview.gif`.
-- `[ ]` Capture `docs/assets/dataset-player.png`.
-- `[ ]` Capture `docs/assets/trajectory-analysis.png`.
-- `[ ]` Update README to show final assets.
+- `[x]` Add `docs/assets/keyboard-teleop-install-gear.mp4`.
+- `[x]` Add `docs/assets/spacemouse-teleop-pouring.mp4`.
+- `[x]` Add `docs/assets/dataset-player-fruit-basket.mp4`.
+- `[x]` Add `docs/assets/trajectory-analysis.png`.
+- `[x]` Add `docs/assets/action-distribution.png`.
+- `[x]` Update README to link final assets.
 
 ## Phase 6: Hardware Validation
 
@@ -157,11 +158,8 @@ Status legend:
 
 Recommended next implementation batch:
 
-1. Complete issue `#1`: capture final README media assets:
-   - `docs/assets/teleop-preview.gif`
-   - `docs/assets/data-collection-preview.gif`
-   - `docs/assets/dataset-player.png`
-   - `docs/assets/trajectory-analysis.png`
+1. Close issue `#1` after confirming the final README media links render on
+   GitHub.
 2. Do a final public redaction pass over `docs/hardware_validation.md` before
    release, especially local IPs, hostnames, paths, and camera serials.
 3. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`

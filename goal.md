@@ -51,8 +51,10 @@ release:
   data collection, and dataset playback.
 - Blocking-gripper camera-frame validation is recorded: the CV2 realtime preview
   may block, but the saved dataset remains normal.
-- Remaining release blockers are real demo media, final public redaction, and
-  the `v0.1.0` GitHub release.
+- README demo media is added, including keyboard teleop, SpaceMouse teleop,
+  dataset playback, trajectory analysis, and action distribution assets.
+- Remaining release blockers are final public redaction and the `v0.1.0` GitHub
+  release.
 
 Target community categories:
 

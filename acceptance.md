@@ -24,10 +24,11 @@ As of 2026-04-29:
 - Open-source hygiene: required files and templates exist locally.
 - GitHub triage setup: required labels, `v0.1.0` milestone, and release-blocker
   issues exist.
-- Demo media: system architecture image exists; real workflow screenshots/GIFs
-  are still pending.
-- Release readiness: blocked until demo media, final public redaction, and the
-  GitHub release are complete.
+- Demo media: system architecture, keyboard teleop video, SpaceMouse teleop
+  video, dataset playback video, trajectory figure, and action distribution
+  figure are present.
+- Release readiness: blocked until final public redaction and the GitHub release
+  are complete.
 - Franka Community submission: draft exists, not ready to send.
 
 ## 1. Repository Identity
@@ -200,10 +201,11 @@ GitHub tracking status:
 The repository passes this section when README includes or links to:
 
 - `docs/assets/system-architecture.png`
-- `docs/assets/teleop-preview.gif`
-- `docs/assets/data-collection-preview.gif`
-- `docs/assets/dataset-player.png`
+- `docs/assets/keyboard-teleop-install-gear.mp4`
+- `docs/assets/spacemouse-teleop-pouring.mp4`
+- `docs/assets/dataset-player-fruit-basket.mp4`
 - `docs/assets/trajectory-analysis.png`
+- `docs/assets/action-distribution.png`
 
 Media acceptance:
 
@@ -245,7 +247,7 @@ Submit only if all are true:
 - `[x]` Docs are complete enough for a new user.
 - `[x]` CI is green on GitHub.
 - `[x]` Hardware validation is filled.
-- `[ ]` Demo media is available.
+- `[x]` Demo media is available.
 - `[ ]` A release exists.
 - `[x]` The project does not overclaim official Franka support.
 - `[x]` The project clearly explains no-ROS scope and ROS relationship.
