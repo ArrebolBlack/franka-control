@@ -35,12 +35,20 @@ def main():
     print(f"Connected to {args.robot_ip}:{args.port}\n")
 
     def rpc(command: str, params: dict = None) -> dict:
+        """Send command and wait for reply (blocking)."""
         msg = {"command": command}
         if params:
             msg["params"] = params
         sock.send_multipart([b"", msgpack.packb(msg, use_bin_type=True)])
         parts = sock.recv_multipart()
         return msgpack.unpackb(parts[-1], raw=False)
+
+    def send_only(command: str, params: dict = None) -> None:
+        """Send command without waiting for reply (fire-and-forget)."""
+        msg = {"command": command}
+        if params:
+            msg["params"] = params
+        sock.send_multipart([b"", msgpack.packb(msg, use_bin_type=True)])
 
     def stats(label: str, times_ms: list[float]) -> None:
         s = sorted(times_ms)
@@ -71,39 +79,39 @@ def main():
         times.append((time.perf_counter() - t0) * 1000)
     stats("get_state", times)
 
-    # ── Test 2: set() RTT (through controller thread queue) ──
-    print("\n=== Test 2: set(ee_desired) RTT (controller thread queue) ===")
+    # ── Test 2: set() send latency (fire-and-forget, no reply) ──
+    print("\n=== Test 2: set(ee_desired) send latency (fire-and-forget) ===")
     times = []
     for _ in range(N):
         t0 = time.perf_counter()
-        rpc("set", {
+        send_only("set", {
             "attr": "ee_desired", "value": ee_bytes, "shape": ee_shape,
         })
         times.append((time.perf_counter() - t0) * 1000)
-    stats("set ee_desired", times)
+    stats("set send", times)
 
     # ── Test 3: set() + get_state() serial (simulates step()) ──────
     print("\n=== Test 3: set() + get_state() serial (= one step()) ===")
     times = []
     for _ in range(N):
         t0 = time.perf_counter()
-        rpc("set", {
+        send_only("set", {
             "attr": "ee_desired", "value": ee_bytes, "shape": ee_shape,
         })
         rpc("get_state")
         times.append((time.perf_counter() - t0) * 1000)
     stats("step()", times)
 
-    # ── Test 4: Sustained round-trip throughput ────────────────────
-    print("\n=== Test 4: Sustained round-trip throughput (3 seconds) ===")
+    # ── Test 4: Sustained send throughput ────────────────────────────
+    print("\n=== Test 4: Sustained send throughput (3 seconds) ===")
     count = 0
     t_end = time.time() + 3.0
     while time.time() < t_end:
-        rpc("set", {
+        send_only("set", {
             "attr": "ee_desired", "value": ee_bytes, "shape": ee_shape,
         })
         count += 1
-    print(f"  {count} round-trips in 3s = {count / 3:.0f} Hz")
+    print(f"  {count} sends in 3s = {count / 3:.0f} Hz")
 
     # ── Test 5: Simulated 10Hz teleop loop (5 seconds) ────────────
     print("\n=== Test 5: Simulated 10Hz teleop loop (5 seconds) ===")
@@ -113,7 +121,7 @@ def main():
     t_loop_start = time.perf_counter()
     for _ in range(n_steps):
         t0 = time.perf_counter()
-        rpc("set", {
+        send_only("set", {
             "attr": "ee_desired", "value": ee_bytes, "shape": ee_shape,
         })
         rpc("get_state")
@@ -125,6 +133,15 @@ def main():
     print(f"  Target: 10Hz | Actual: {n_steps / total:.1f}Hz | "
           f"Wall: {total:.2f}s")
     stats("step() in loop", step_durations)
+
+    # ── Test 6: get_state() sustained throughput ──────────────────
+    print("\n=== Test 6: get_state() sustained throughput (3 seconds) ===")
+    count = 0
+    t_end = time.time() + 3.0
+    while time.time() < t_end:
+        rpc("get_state")
+        count += 1
+    print(f"  {count} get_state in 3s = {count / 3:.0f} Hz")
 
     # ── Cleanup ────────────────────────────────────────────────────
     sock.close()
