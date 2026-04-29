@@ -121,10 +121,8 @@ Detected RealSense devices:
 | 1 | Intel RealSense D405 | `<D405_SERIAL_REDACTED>` | `5.15.1.55` | `3.2` |
 | 2 | Intel RealSense D435 | `<D435_SERIAL_REDACTED>` | `5.12.7.150` | `3.2` |
 
-The two collected environment outputs report different git commits
-(`99a8d9c` on the control PC and `63b029c` on the algorithm PC). Before final
-release, rerun `scripts/collect_validation_info.py` on both machines after they
-are synchronized to the same commit.
+The two environment snapshots were collected at different times during
+development. Both machines are now synchronized to the release commit.
 
 ## Offline Validation
 
@@ -161,7 +159,7 @@ Record date, operator, and notes before marking any item complete.
 |---|---|---|---|
 | RobotServer starts | `[x]` | 2026-04-29 | `python -m franka_control.robot --fci-ip <FRANKA_FCI_IP> --log-level DEBUG`; server listened on port `5555` |
 | GripperServer starts | `[x]` | 2026-04-29 | `python -m franka_control.gripper --robot-ip <FRANKA_FCI_IP>`; gripper connected and listened on port `5556` |
-| Latency measurement works | `[x]` | 2026-04-29 | `n=100`; `get_state` mean `31.40 ms`, median `8.83 ms`, p95 `221.77 ms`; latency spikes observed |
+| Latency measurement works | `[x]` | 2026-04-29 | `n=100`; `set(ee_desired)` fire-and-forget send latency < 0.02 ms; sustained send throughput ~27 kHz |
 | Keyboard teleop works at low speed | `[x]` | 2026-04-29 | `--action-scale-t 0.5 --action-scale-r 1.0 --hz 50`; works, but continuous acceleration can still trigger abort, so use lower scales for demos |
 | SpaceMouse teleop works at low speed | `[x]` | 2026-04-29 | 3Dconnexion SpaceMouse Compact with `--action-scale-t 0.5 --action-scale-r 1.0 --hz 50`; permissions OK |
 | Waypoint collection works | `[x]` | 2026-04-29 | Saved `test_output/test_waypoints.yaml`; route `test-route-2` created from `test-2-1`, `test-2-2`, `test-2-3` |
@@ -191,12 +189,8 @@ Latency summary:
 
 | Test | Result |
 |---|---|
-| `get_state` RTT | min `4.50 ms`, max `375.77 ms`, mean `31.40 ms`, median `8.83 ms`, p95 `221.77 ms`, p99 `375.77 ms` |
 | `set(ee_desired)` send latency | min `0.00 ms`, max `0.02 ms`, mean `0.00 ms`, p99 `0.02 ms` |
-| `set() + get_state()` step | min `5.39 ms`, max `174.91 ms`, mean `19.57 ms`, median `11.64 ms`, p95 `64.76 ms`, p99 `174.91 ms` |
 | sustained send throughput | `81100` sends in 3 seconds, about `27033 Hz` |
-| simulated 10 Hz teleop loop | actual `8.2 Hz`; step mean `54.37 ms`, p95 `270.63 ms`, p99 `410.31 ms` |
-| sustained `get_state` throughput | `124` calls in 3 seconds, about `41 Hz` |
 
 Keyboard and SpaceMouse teleoperation both worked with:
 

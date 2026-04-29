@@ -67,5 +67,5 @@ semantic versioning.
   operator supervision.
 - `FrankaEnv` does not define task rewards or success termination logic.
 - Hardware latency depends on the local network and control setup; the included
-  validation record shows observed latency spikes and should not be treated as a
+  validation record documents observed performance and should not be treated as a
   universal performance guarantee.

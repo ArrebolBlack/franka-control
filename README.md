@@ -14,8 +14,8 @@ It provides a lightweight dual-machine stack with fast ZMQ state streaming, a Gy
 environment, SpaceMouse/keyboard teleoperation, waypoint and TOPPRA trajectory tools,
 Pinocchio FK/IK, RealSense camera integration, and LeRobot v3 dataset collection.
 
-> Status: `v0.1.0` release candidate. The API is usable, but hardware control
-> always requires careful validation on your robot and network setup.
+> `v0.1.0` released. Hardware control always requires careful validation on
+> your robot and network setup.
 
 ## Why This Project
 

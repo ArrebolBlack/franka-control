@@ -23,7 +23,7 @@ dataset playback and analysis.
 | Item | URL |
 |---|---|
 | Repository | `https://github.com/ArrebolBlack/franka-control` |
-| Release | `TBD after v0.1.0 release` |
+| Release | `https://github.com/ArrebolBlack/franka-control/releases/tag/v0.1.0` |
 | Demo media | `docs/assets/keyboard-teleop-install-gear.mp4`, `docs/assets/spacemouse-teleop-pouring.mp4`, `docs/assets/dataset-player-fruit-basket.mp4` |
 | Hardware validation | `docs/hardware_validation.md` |
 
@@ -67,8 +67,8 @@ Best regards,
 
 ## Send Only After
 
-- `[ ]` CI is green on the public repository.
+- `[x]` CI is green on the public repository.
 - `[x]` `docs/hardware_validation.md` is filled with real tested values.
 - `[x]` README links to real demo media.
 - `[x]` `CHANGELOG.md` is finalized for `v0.1.0`.
-- `[ ]` GitHub release `v0.1.0` exists.
+- `[x]` GitHub release `v0.1.0` exists.
