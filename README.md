@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Franka Control logo" width="420">
+</p>
+
 # Franka Control
 
 [![CI](https://github.com/ArrebolBlack/franka-control/actions/workflows/ci.yml/badge.svg)](https://github.com/ArrebolBlack/franka-control/actions/workflows/ci.yml)
@@ -46,30 +50,35 @@ Python API, rapid embodied AI iteration, and direct integration with learning pi
 
 ## Demos and Screenshots
 
-Release media is stored under [`docs/assets/`](docs/assets/README.md). If your
-Markdown renderer does not show video controls, use the MP4 links below each
-demo.
+Compact GIF previews are embedded for quick scanning. Each preview links to the
+higher-quality MP4 recording.
 
 <table>
   <tr>
-    <td width="50%">
+    <td width="50%" valign="top">
       <strong>Keyboard teleoperation: gear insertion</strong><br>
-      <video src="docs/assets/keyboard-teleop-install-gear.mp4" controls muted width="100%"></video><br>
-      <a href="docs/assets/keyboard-teleop-install-gear.mp4">Open MP4</a>
+      <a href="docs/assets/keyboard-teleop-install-gear.mp4">
+        <img src="docs/assets/keyboard-teleop-install-gear.gif" alt="Keyboard teleoperation demo for gear insertion" width="100%">
+      </a><br>
+      <a href="docs/assets/keyboard-teleop-install-gear.mp4">Full video (MP4)</a>
     </td>
-    <td width="50%">
+    <td width="50%" valign="top">
       <strong>SpaceMouse teleoperation: pouring</strong><br>
-      <video src="docs/assets/spacemouse-teleop-pouring.mp4" controls muted width="100%"></video><br>
-      <a href="docs/assets/spacemouse-teleop-pouring.mp4">Open MP4</a>
+      <a href="docs/assets/spacemouse-teleop-pouring.mp4">
+        <img src="docs/assets/spacemouse-teleop-pouring.gif" alt="SpaceMouse teleoperation demo for pouring" width="100%">
+      </a><br>
+      <a href="docs/assets/spacemouse-teleop-pouring.mp4">Full video (MP4)</a>
     </td>
   </tr>
   <tr>
-    <td width="50%">
+    <td width="50%" valign="top">
       <strong>Dataset playback: fruit basket episode</strong><br>
-      <video src="docs/assets/dataset-player-fruit-basket.mp4" controls muted width="100%"></video><br>
-      <a href="docs/assets/dataset-player-fruit-basket.mp4">Open MP4</a>
+      <a href="docs/assets/dataset-player-fruit-basket.mp4">
+        <img src="docs/assets/dataset-player-fruit-basket.gif" alt="Dataset player demo for a fruit basket episode" width="100%">
+      </a><br>
+      <a href="docs/assets/dataset-player-fruit-basket.mp4">Full video (MP4)</a>
     </td>
-    <td width="50%">
+    <td width="50%" valign="top">
       <strong>Dataset analysis outputs</strong><br>
       <a href="docs/assets/trajectory-analysis.png">
         <img src="docs/assets/trajectory-analysis.png" alt="Trajectory visualization from a collected Franka dataset" width="49%">

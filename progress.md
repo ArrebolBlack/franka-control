@@ -962,3 +962,52 @@ publishing `v0.1.0`.
 - `git diff --check` passed.
 - GitHub Actions run `25139136138` for the previous release-readiness commit
   passed before this README media fix was committed.
+
+## 2026-04-30: README Logo Integration
+
+### Current Subtask
+
+Add the user-provided `docs/assets/logo.png` to the README and assets index.
+
+### This Round's Method
+
+- Located `docs/assets/logo.png`.
+- Confirmed image metadata: PNG, `1672 x 941`, RGB.
+- Added the logo at the top of `README.md` as the first visual brand signal.
+- Registered `logo.png` in `docs/assets/README.md`.
+- Marked the optional logo item complete in `todo.md`.
+
+### Remaining
+
+- Commit and push the README logo update before tagging `v0.1.0`.
+
+### Validation
+
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+- `docs/assets/logo.png` is about `1.2M`.
+
+## 2026-04-30: README GIF Demo Preview Integration
+
+### Current Subtask
+
+Use the newly available demo GIF previews correctly in the README.
+
+### This Round's Method
+
+- Found three demo preview GIFs in `docs/assets/`:
+  - `keyboard-teleop-install-gear.gif`.
+  - `spacemouse-teleop-pouring.gif`.
+  - `dataset-player-fruit-basket.gif`.
+- Confirmed their sizes and dimensions:
+  - keyboard teleop GIF: about `1.9M`, `480 x 206`.
+  - SpaceMouse teleop GIF: about `2.0M`, `480 x 206`.
+  - dataset playback GIF: about `4.7M`, `480 x 270`.
+- Updated `README.md` so the demo section uses inline GIF previews that link to
+  the higher-quality MP4 files.
+- Updated `docs/assets/README.md` to list the GIF preview assets.
+
+### Remaining
+
+- Run link/diff checks.
+- Commit and push the README demo GIF update before tagging `v0.1.0`.

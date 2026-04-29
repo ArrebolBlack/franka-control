@@ -66,7 +66,7 @@ approval before execution.
   generated artifacts.
 - `[x]` Finalize README with architecture, teleop, data collection, dataset
   visualization, media links, and known limitations.
-- `[ ]` Optional: create or add a project logo only if it improves public
+- `[x]` Optional: create or add a project logo only if it improves public
   presentation without delaying release.
 
 ## Architecture Review Follow-Ups
