@@ -126,6 +126,10 @@ class GripperServer:
         self._worker_thread: threading.Thread | None = None
         self._stop_flag = False
 
+        # Homing protection (prevents state polling during homing)
+        self._homing_lock = threading.Lock()
+        self._homing_in_progress = False
+
         # ZMQ
         self._ctx: zmq.Context | None = None
         self._cmd_socket = None
@@ -249,7 +253,20 @@ class GripperServer:
         return {"success": True, "state": state, "result": result}
 
     def _cmd_homing(self, params: dict) -> dict:
-        return self._submit_job("homing", lambda: self._gripper.homing())
+        return self._submit_job("homing", self._do_homing)
+
+    def _do_homing(self):
+        """Execute homing with state polling paused."""
+        with self._homing_lock:
+            self._homing_in_progress = True
+        try:
+            logger.info("Homing started (state polling paused)")
+            result = self._gripper.homing()
+            logger.info("Homing completed")
+            return result
+        finally:
+            with self._homing_lock:
+                self._homing_in_progress = False
 
     def _cmd_open(self, params: dict) -> dict:
         width = float(params.get("width", DEFAULT_OPEN_WIDTH))
@@ -319,12 +336,14 @@ class GripperServer:
                         self._worker_result = {
                             "success": True if result is None else bool(result),
                         }
-                        self._worker_status = GripperStatus.IDLE
+                    # Always reset status (even if stopped)
+                    self._worker_status = GripperStatus.IDLE
             except Exception as e:
                 with self._worker_lock:
                     if not self._stop_flag:
                         self._worker_result = {"success": False, "error": str(e)}
-                        self._worker_status = GripperStatus.IDLE
+                    # Always reset status (even if stopped)
+                    self._worker_status = GripperStatus.IDLE
 
         t = threading.Thread(target=_run, daemon=True)
         self._worker_thread = t
@@ -334,7 +353,15 @@ class GripperServer:
     # ── State polling ────────────────────────────────────────────
 
     def _poll_state_once(self) -> None:
-        """Read gripper state once and update cache."""
+        """Read gripper state once and update cache.
+
+        Skips polling during homing to avoid interrupting the calibration.
+        """
+        # Check if homing is in progress
+        with self._homing_lock:
+            if self._homing_in_progress:
+                return  # Skip state polling during homing
+
         try:
             s = self._gripper.read_once()
             with self._state_lock:
