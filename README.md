@@ -316,7 +316,7 @@ If this repository helps your research, please cite it using [`CITATION.cff`](CI
 ```bibtex
 @software{franka_control,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
-  author = {Yu, Yiqi},
+  author = {ArrebolBlack},
   year = {2026},
   url = {https://github.com/ArrebolBlack/franka-control}
 }
