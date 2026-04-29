@@ -31,8 +31,8 @@ Status legend:
 - `[x]` Hardware validation helper is covered by green CI.
 - `[x]` Media capture runbook is added.
 - `[x]` Release materials checklist is added.
-- `[~]` Hardware validation matrix has real setup/environment values and core
-  workflow results; blocking-gripper camera-frame validation remains pending.
+- `[x]` Hardware validation matrix has real setup/environment values and
+  functional workflow results.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
 - `[ ]` Franka Community submission has not been sent yet.
@@ -124,7 +124,7 @@ Status legend:
 - `[x]` Validate data collection with cameras.
 - `[x]` Validate data collection with `--no-camera`.
 - `[x]` Validate dataset player.
-- `[ ]` Validate blocking gripper operations do not freeze recorded camera frames.
+- `[x]` Validate blocking gripper operations do not freeze recorded camera frames.
 
 ## Phase 7: Release
 
@@ -134,7 +134,7 @@ Status legend:
   and Franka Community submission.
 - `[ ]` Confirm all tests pass.
 - `[ ]` Confirm all docs links pass.
-- `[ ]` Confirm hardware validation table is filled.
+- `[x]` Confirm hardware validation table is filled.
 - `[ ]` Tag `v0.1.0`.
 - `[ ]` Push tag.
 - `[ ]` Create GitHub Release.
@@ -161,9 +161,8 @@ Recommended next implementation batch:
    - `docs/assets/data-collection-preview.gif`
    - `docs/assets/dataset-player.png`
    - `docs/assets/trajectory-analysis.png`
-2. Complete the remaining issue `#2` hardware note: confirm blocking gripper
-   operations do not freeze recorded camera frames, then do a final public
-   redaction pass over `docs/hardware_validation.md`.
+2. Do a final public redaction pass over `docs/hardware_validation.md` before
+   release, especially local IPs, hostnames, paths, and camera serials.
 3. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
    release after media and hardware validation are ready.
 4. Complete issue `#4`: finalize Franka Community submission after release.

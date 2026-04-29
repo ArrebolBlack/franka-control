@@ -14,8 +14,8 @@ As of 2026-04-29:
   algorithm-PC paths.
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: real setup, network, machine, dependency, camera, and
-  teleop-device values are recorded; core robot workflow validation is recorded;
-  blocking-gripper camera-frame validation remains pending.
+  teleop-device values are recorded; core robot workflow validation and
+  blocking-gripper camera-frame validation are recorded.
 - Release materials checklist: exists and lists the remaining external
   information, validation evidence, screenshots/GIFs, demo video, and submission
   inputs.
@@ -26,7 +26,7 @@ As of 2026-04-29:
   issues exist.
 - Demo media: system architecture image exists; real workflow screenshots/GIFs
   are still pending.
-- Release readiness: blocked until hardware validation, demo media, and the
+- Release readiness: blocked until demo media, final public redaction, and the
   GitHub release are complete.
 - Franka Community submission: draft exists, not ready to send.
 
@@ -242,7 +242,7 @@ Submit only if all are true:
 - `[ ]` README is polished and accurate.
 - `[x]` Docs are complete enough for a new user.
 - `[x]` CI is green on GitHub.
-- `[ ]` Hardware validation is filled.
+- `[x]` Hardware validation is filled.
 - `[ ]` Demo media is available.
 - `[ ]` A release exists.
 - `[x]` The project does not overclaim official Franka support.

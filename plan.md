@@ -13,8 +13,8 @@ As of 2026-04-29:
 - Phase 1 documentation foundation is complete.
 - Phase 2 quick-start expansion is complete locally.
 - Phase 3 troubleshooting and hardware validation docs are complete locally;
-  real setup values and core FR3 workflow results are recorded, with one
-  blocking-gripper camera-frame continuity check still pending.
+  real setup values, core FR3 workflow results, and blocking-gripper
+  camera-frame validation are recorded.
 - Phase 4 CI and quality gates are configured locally.
 - Phase 5 open-source hygiene files are complete locally.
 - Phase 6 demo media is partially complete: the architecture diagram exists,
@@ -34,10 +34,10 @@ As of 2026-04-29:
   validation evidence, media files, demo links, and submission inputs.
 - Initial real setup/environment values are recorded in
   `docs/hardware_validation.md`.
-- Core hardware workflow results are recorded; blocking-gripper camera-frame
-  validation and real workflow screenshots/GIFs are still pending.
+- Core hardware workflow results are recorded, including blocking-gripper
+  camera-frame validation; real workflow screenshots/GIFs are still pending.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
-  hardware validation, demo media, and GitHub release steps are complete.
+  demo media, final public redaction, and GitHub release steps are complete.
 
 ## 1. Project Positioning
 

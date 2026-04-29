@@ -171,7 +171,7 @@ Record date, operator, and notes before marking any item complete.
 | Data collection with cameras works | `[x]` | 2026-04-29 | `repo-id test/franka_media`, root `test_output/franka_media`, `ee_delta`, 30 FPS, 1 episode |
 | Data collection with `--no-camera` works | `[x]` | 2026-04-29 | `repo-id test/franka_nocam`, root `test_output/franka_nocam`, `ee_delta`, 30 FPS, 1 episode |
 | Dataset player works | `[x]` | 2026-04-29 | `scripts/play_dataset.py` worked for both camera and no-camera datasets |
-| Blocking gripper calls do not freeze recorded camera frames | `[ ]` | TBD | Not separately recorded yet; validate during a camera episode with gripper open/close/grasp and compare frame timestamps |
+| Blocking gripper calls do not freeze recorded camera frames | `[x]` | 2026-04-29 | Confirmed during camera collection: the OpenCV realtime window can block, but the recorded dataset remains normal |
 
 ## Hardware Validation Results
 
@@ -296,6 +296,13 @@ python scripts/play_dataset.py \
 
 If the dataset root already exists, `collect_episodes` is expected to fail
 unless `--resume` is passed or a new `--repo-id` / `--root` is used.
+
+Blocking gripper validation:
+
+- Gripper open/close/grasp was exercised during camera data collection.
+- The OpenCV realtime preview window can block during the gripper operation.
+- The saved dataset was checked and remained normal; recorded camera frames were
+  not frozen by the blocking gripper call.
 
 ## Validation Commands
 

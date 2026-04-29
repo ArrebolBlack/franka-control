@@ -152,6 +152,9 @@ Keyboard mode:
 ## Notes
 
 - `StateStreamRecorder` reads robot state and camera frames in a background thread.
-- Blocking gripper calls therefore do not freeze recorded camera frames.
+- Blocking gripper calls do not freeze recorded camera frames in the saved
+  dataset. The OpenCV realtime preview window can still block while the gripper
+  command is running, so verify the saved dataset rather than judging only from
+  preview smoothness.
 - Success/failure is stored in `meta/episode_annotations.json`.
 - Failed episodes are discarded by default unless `--save-failure` is set.

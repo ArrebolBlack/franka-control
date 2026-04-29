@@ -366,7 +366,30 @@ external artifacts are complete.
 
 ### Remaining
 
-- Blocking gripper calls still need a separate camera-frame continuity check.
+- Blocking gripper camera-frame continuity was completed in the next entry.
 - The real README screenshots/GIFs are still pending.
 - Final release should still wait for media, final redaction, and a synchronized
   commit/environment re-check on both machines.
+
+## 2026-04-29: Blocking Gripper Camera-Frame Validation
+
+### Completed
+
+- Recorded the final hardware checklist item in `docs/hardware_validation.md`:
+  blocking gripper open/close/grasp calls do not freeze recorded camera frames.
+- Documented the observed behavior:
+  - the CV2 realtime preview window can block during the gripper operation,
+  - the saved dataset remains normal and should be used as the validation source.
+- Updated `docs/data_collection.md` and `docs/release_materials_checklist.md`
+  with the same distinction between realtime preview smoothness and saved
+  dataset correctness.
+- Updated `todo.md`, `acceptance.md`, `goal.md`, and `plan.md` to mark
+  hardware validation as filled.
+
+### Remaining
+
+- Real README screenshots/GIFs are still pending.
+- Final release still needs a public redaction pass over local network,
+  hostname, filesystem path, and camera serial details.
+- Re-run the environment helper after both machines are synchronized to the same
+  release commit.

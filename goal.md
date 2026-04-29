@@ -49,8 +49,10 @@ release:
 - Core hardware workflow validation is recorded, including server startup,
   latency, teleoperation, waypoint/trajectory execution, camera and no-camera
   data collection, and dataset playback.
-- Remaining release blockers are final blocking-gripper validation, real demo
-  media, and the `v0.1.0` GitHub release.
+- Blocking-gripper camera-frame validation is recorded: the CV2 realtime preview
+  may block, but the saved dataset remains normal.
+- Remaining release blockers are real demo media, final public redaction, and
+  the `v0.1.0` GitHub release.
 
 Target community categories:
 

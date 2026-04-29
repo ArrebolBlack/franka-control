@@ -59,7 +59,7 @@
 | 带相机的数据采集结果 | README demo 和 LeRobot 数据集功能需要真实多模态数据。 | 运行一次短采集：`python -m franka_control.scripts.collect_episodes --robot-ip <CONTROL_PC_IP> --gripper-host <CONTROL_PC_IP> --repo-id test/franka_media --root data/franka_media --task-name "media capture validation" --device keyboard --control-mode ee_delta --action-scale-t 0.5 --action-scale-r 1.0 --fps 30 --num-episodes 1 --cameras config/cameras.yaml --display auto`。如果目录已存在，使用 `--resume` 或换新的 `--repo-id` / `--root`。 |
 | `--no-camera` 数据采集结果 | 用来隔离机器人状态/action 写入链路，不受相机问题影响。 | 运行 `collect_episodes` 并加 `--action-scale-t 0.5 --action-scale-r 1.0 --no-camera --display off`，记录数据集路径和是否成功写入。 |
 | dataset player 可播放结果 | 证明采集出的 LeRobot 数据集能被回放和检查。 | 运行 `python scripts/play_dataset.py --repo-id test/franka_media --root data/franka_media`，确认窗口、HUD、帧切换、播放控制可用。 |
-| blocking gripper 不冻结相机帧的验证 | 这是数据同步质量风险点，抓取动作不能导致视频长时间卡住。 | 在带相机采集时执行夹爪 open/close/grasp，检查帧时间戳或预览画面是否持续更新，记录观察结果。 |
+| blocking gripper 不冻结相机帧的验证 | 这是数据同步质量风险点，抓取动作不能导致保存的数据集视频长时间卡住。 | 已确认：带相机采集时执行夹爪 open/close/grasp，CV2 实时窗口可能阻塞，但保存的数据集正常。后续如复测，应以保存的数据集帧连续性为准，不只看实时预览。 |
 | 任何失败项的完整日志 | 失败也有价值，能避免文档过度承诺。 | 保存命令、完整错误、机器人是否移动、是否急停、恢复方式；不要删除失败记录，只把状态标为 pending 或 failed。 |
 
 ## 4. 图片、GIF、视频 Demo
