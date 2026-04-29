@@ -46,8 +46,11 @@ release:
 - Initial real setup details are recorded, including FR3 version, network
   addresses, control/algorithm PC environments, RealSense devices, and teleop
   device details.
-- Remaining release blockers are real hardware validation, real demo media, and
-  the `v0.1.0` GitHub release.
+- Core hardware workflow validation is recorded, including server startup,
+  latency, teleoperation, waypoint/trajectory execution, camera and no-camera
+  data collection, and dataset playback.
+- Remaining release blockers are final blocking-gripper validation, real demo
+  media, and the `v0.1.0` GitHub release.
 
 Target community categories:
 

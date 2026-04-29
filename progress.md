@@ -338,3 +338,35 @@ external artifacts are complete.
   `RobotServer`, `GripperServer`, latency, teleop, waypoint, trajectory,
   camera preview, data collection, dataset player, and blocking-gripper checks.
 - Real README screenshots/GIFs are still pending.
+
+## 2026-04-29: Core Hardware Workflow Validation
+
+### Completed
+
+- Recorded successful real FR3 validation results in
+  `docs/hardware_validation.md` for:
+  - `RobotServer` startup on port `5555`.
+  - `GripperServer` startup on port `5556`.
+  - latency measurement from algorithm PC to control PC.
+  - low-speed keyboard teleoperation.
+  - low-speed SpaceMouse teleoperation.
+  - waypoint collection into `test_output/test_waypoints.yaml`.
+  - trajectory dry-run and safe trajectory execution for `test-route-2`.
+  - RealSense camera preview and data collection with `config/cameras.yaml`.
+  - state/action data collection with `--no-camera`.
+  - dataset playback for both camera and no-camera datasets.
+- Recorded the observed latency statistics, including high tail-latency spikes.
+- Updated public example commands to include conservative
+  `--action-scale-t 0.5 --action-scale-r 1.0` values for data collection and
+  first-run demos.
+- Documented that existing dataset roots require `--resume` or a fresh
+  `--repo-id` / `--root`.
+- Updated `todo.md`, `acceptance.md`, `goal.md`, and `plan.md` to reflect that
+  core workflow validation is recorded.
+
+### Remaining
+
+- Blocking gripper calls still need a separate camera-frame continuity check.
+- The real README screenshots/GIFs are still pending.
+- Final release should still wait for media, final redaction, and a synchronized
+  commit/environment re-check on both machines.

@@ -256,6 +256,8 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "state only validation" \
     --device keyboard \
     --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
     --fps 30 \
     --num-episodes 1 \
     --no-camera \
@@ -281,6 +283,8 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "test teleoperation" \
     --device keyboard \
     --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
     --fps 30 \
     --num-episodes 1 \
     --cameras config/cameras.yaml \
@@ -292,6 +296,8 @@ Expected output:
 - The configured camera names are logged.
 - A preview window opens if OpenCV GUI support is available.
 - Recorded frames include robot state, action, task text, and RGB images.
+- If the dataset root already exists, use `--resume` or a fresh `--repo-id` /
+  `--root`; failing without `--resume` is expected.
 
 Play back the dataset on a GUI-capable machine:
 

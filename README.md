@@ -203,8 +203,9 @@ python -m franka_control.scripts.teleop \
     --robot-ip 192.168.0.100 \
     --gripper-host 192.168.0.100 \
     --device spacemouse \
-    --action-scale-t 1.0 \
-    --action-scale-r 2.5
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --hz 50
 ```
 
 5. Collect demonstrations:
@@ -218,7 +219,9 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "pick red cube" \
     --device spacemouse \
     --control-mode ee_delta \
-    --fps 60 \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --fps 30 \
     --num-episodes 50 \
     --cameras config/cameras.yaml \
     --display auto

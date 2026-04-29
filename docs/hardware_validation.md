@@ -8,17 +8,17 @@ alone.
 
 | Item | Tested Value | Status | Notes |
 |---|---|---|---|
-| Robot | Franka Research 3, Arm3Rv2 | Recorded, pending workflow validation | Provided from the real FR3 setup |
-| Franka system version | Control `5.9.2`; system image `5.9.2` | Recorded, pending workflow validation | Provided from Franka system UI |
-| Franka Hand | Franka Hand, default configuration | Recorded, pending gripper validation | Homing/open/close still need functional validation |
+| Robot | Franka Research 3, Arm3Rv2 | Validated on real setup | Provided from the real FR3 setup |
+| Franka system version | Control `5.9.2`; system image `5.9.2` | Validated on real setup | Provided from Franka system UI |
+| Franka Hand | Franka Hand, default configuration | Validated on real setup | `GripperServer` starts; route gripper actions validated |
 | Control PC OS | Ubuntu 24.04.4 LTS | Recorded | Host: `haoce-HP-Pro-Tower-ZHAN-99-G9-Desktop-PC` |
 | Control PC kernel | `6.8.1-1046-realtime` PREEMPT_RT | Recorded | Full string: `Linux haoce-HP-Pro-Tower-ZHAN-99-G9-Desktop-PC 6.8.1-1046-realtime #47-Ubuntu SMP PREEMPT_RT Tue Mar 24 22:17:59 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux` |
 | Algorithm PC OS | Ubuntu 24.04.4 LTS | Recorded | Host: `yjq-ROG5090` |
 | Python | Control PC: `3.11.15`; algorithm PC: `3.12.13` | Recorded, environment alignment recommended | CI targets Python 3.12; release target is one consistent control/algorithm environment where practical |
-| RealSense cameras | Intel RealSense D405 `352122274606`; Intel RealSense D435 `138422075015` | Detected on algorithm PC, preview pending | `config/cameras.yaml` confirmed by operator |
-| Teleop devices | Standard keyboard; 3Dconnexion SpaceMouse Compact `256f:c635` | Device recorded, motion validation pending | SpaceMouse permissions reported OK |
-| Control modes | TBD | Pending validation | Example: `ee_delta`, `joint_delta`, `joint_abs` |
-| Data collection FPS | TBD | Pending validation | Example: 30 or 60 |
+| RealSense cameras | Intel RealSense D405 `352122274606`; Intel RealSense D435 `138422075015` | Validated on algorithm PC | `config/cameras.yaml` confirmed; camera collection worked |
+| Teleop devices | Standard keyboard; 3Dconnexion SpaceMouse Compact `256f:c635` | Validated on real setup | SpaceMouse permissions OK |
+| Control modes | `ee_delta`; waypoint/trajectory route execution | Partially validated | `ee_delta` data collection validated; route execution validated through trajectory tooling |
+| Data collection FPS | `30` | Validated on real setup | Camera and no-camera collection both worked at 30 FPS |
 | Robot RPC port | `5555` default | Confirmed from source | `franka_control/robot/robot_server.py` `DEFAULT_CMD_PORT` |
 | Gripper RPC port | `5556` default | Confirmed from source | `franka_control/gripper/gripper_server.py` `DEFAULT_CMD_PORT`; client scripts default to `5556` |
 | State stream port | `5557` default | Confirmed from source | `franka_control/robot/robot_server.py` `DEFAULT_STATE_STREAM_PORT` |
@@ -159,19 +159,143 @@ Record date, operator, and notes before marking any item complete.
 
 | Validation Item | Status | Date | Notes |
 |---|---|---|---|
-| RobotServer starts | `[ ]` | TBD | Use `python -m franka_control.robot --fci-ip 172.16.0.2` |
-| GripperServer starts | `[ ]` | TBD | Use `python -m franka_control.gripper --robot-ip 172.16.0.2` |
-| Latency measurement works | `[ ]` | TBD | Run from algorithm PC |
-| Keyboard teleop works at low speed | `[ ]` | TBD | Start with low `--action-scale-*` |
-| SpaceMouse teleop works at low speed | `[ ]` | TBD | Device: 3Dconnexion SpaceMouse Compact; permissions reported OK |
-| Waypoint collection works | `[ ]` | TBD | Save and reload `config/waypoints.yaml` |
-| Trajectory dry-run works | `[ ]` | TBD | No robot connection required |
-| Safe trajectory execution works | `[ ]` | TBD | Use low velocity and acceleration scales |
-| Camera preview works | `[ ]` | TBD | D405 and D435 detected; `config/cameras.yaml` confirmed |
-| Data collection with cameras works | `[ ]` | TBD | Confirm image/state alignment |
-| Data collection with `--no-camera` works | `[ ]` | TBD | Isolates robot and dataset path |
-| Dataset player works | `[ ]` | TBD | Requires OpenCV GUI support |
-| Blocking gripper calls do not freeze recorded camera frames | `[ ]` | TBD | Compare frame timestamps during grasp |
+| RobotServer starts | `[x]` | 2026-04-29 | `python -m franka_control.robot --fci-ip 172.16.0.2 --log-level DEBUG`; server listened on port `5555` |
+| GripperServer starts | `[x]` | 2026-04-29 | `python -m franka_control.gripper --robot-ip 172.16.0.2`; gripper connected and listened on port `5556` |
+| Latency measurement works | `[x]` | 2026-04-29 | `n=100`; `get_state` mean `31.40 ms`, median `8.83 ms`, p95 `221.77 ms`; latency spikes observed |
+| Keyboard teleop works at low speed | `[x]` | 2026-04-29 | `--action-scale-t 0.5 --action-scale-r 1.0 --hz 50`; works, but continuous acceleration can still trigger abort, so use lower scales for demos |
+| SpaceMouse teleop works at low speed | `[x]` | 2026-04-29 | 3Dconnexion SpaceMouse Compact with `--action-scale-t 0.5 --action-scale-r 1.0 --hz 50`; permissions OK |
+| Waypoint collection works | `[x]` | 2026-04-29 | Saved `test_output/test_waypoints.yaml`; route `test-route-2` created from `test-2-1`, `test-2-2`, `test-2-3` |
+| Trajectory dry-run works | `[x]` | 2026-04-29 | Reported successful for `test-route-2` |
+| Safe trajectory execution works | `[x]` | 2026-04-29 | `--vel-scale 0.3 --acc-scale 0.3 --time-scale 3.0`; execution log saved to `test_output/execution_log.txt` |
+| Camera preview works | `[x]` | 2026-04-29 | `collect_episodes --cameras config/cameras.yaml --display auto` worked with D405/D435 |
+| Data collection with cameras works | `[x]` | 2026-04-29 | `repo-id test/franka_media`, root `test_output/franka_media`, `ee_delta`, 30 FPS, 1 episode |
+| Data collection with `--no-camera` works | `[x]` | 2026-04-29 | `repo-id test/franka_nocam`, root `test_output/franka_nocam`, `ee_delta`, 30 FPS, 1 episode |
+| Dataset player works | `[x]` | 2026-04-29 | `scripts/play_dataset.py` worked for both camera and no-camera datasets |
+| Blocking gripper calls do not freeze recorded camera frames | `[ ]` | TBD | Not separately recorded yet; validate during a camera episode with gripper open/close/grasp and compare frame timestamps |
+
+## Hardware Validation Results
+
+Server startup:
+
+```text
+python -m franka_control.robot --fci-ip 172.16.0.2 --log-level DEBUG
+2026-04-29 18:47:28,656 [INFO] franka_control.robot.robot_server: Robot server listening on port 5555
+
+python -m franka_control.gripper --robot-ip 172.16.0.2
+2026-04-29 18:47:35,723 [INFO] franka_control.gripper.gripper_server: Connecting to gripper at 172.16.0.2 ...
+2026-04-29 18:47:35,724 [INFO] franka_control.gripper.gripper_server: Gripper connected.
+2026-04-29 18:47:35,724 [INFO] franka_control.gripper.gripper_server: Gripper server listening on port 5556
+```
+
+Latency summary:
+
+| Test | Result |
+|---|---|
+| `get_state` RTT | min `4.50 ms`, max `375.77 ms`, mean `31.40 ms`, median `8.83 ms`, p95 `221.77 ms`, p99 `375.77 ms` |
+| `set(ee_desired)` send latency | min `0.00 ms`, max `0.02 ms`, mean `0.00 ms`, p99 `0.02 ms` |
+| `set() + get_state()` step | min `5.39 ms`, max `174.91 ms`, mean `19.57 ms`, median `11.64 ms`, p95 `64.76 ms`, p99 `174.91 ms` |
+| sustained send throughput | `81100` sends in 3 seconds, about `27033 Hz` |
+| simulated 10 Hz teleop loop | actual `8.2 Hz`; step mean `54.37 ms`, p95 `270.63 ms`, p99 `410.31 ms` |
+| sustained `get_state` throughput | `124` calls in 3 seconds, about `41 Hz` |
+
+Keyboard and SpaceMouse teleoperation both worked with:
+
+```bash
+python -m franka_control.scripts.teleop \
+    --robot-ip 10.100.79.71 \
+    --device keyboard \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --hz 50
+
+python -m franka_control.scripts.teleop \
+    --robot-ip 10.100.79.71 \
+    --device spacemouse \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --hz 50
+```
+
+At these scales, continuous acceleration can still trigger robot abort. For
+public demo capture and first-run user examples, start with conservative
+`--action-scale-t` and `--action-scale-r` values and reduce them further if the
+motion feels fast.
+
+Waypoint route recorded:
+
+```text
+test-2-1: [-0.006, -0.774, -0.01, -2.903, -0.006, 2.034, 0.775]
+test-2-2: [-0.006, -0.832, -0.01, -2.442, -0.006, 1.594, 0.775]
+test-2-3: [-0.006, -0.851, -0.01, -2.629, -0.006, 1.683, 0.775]
+
+Route test-route-2: test-2-1 -> test-2-2 -> test-2-3
+Gripper actions: test-2-2 close, test-2-3 open
+```
+
+Validated waypoint and trajectory commands:
+
+```bash
+python -m franka_control.scripts.collect_waypoints \
+    --robot-ip 10.100.79.71 \
+    --device keyboard \
+    --waypoints test_output/test_waypoints.yaml \
+    --action-scale-t 0.5 \
+    --action-scale-r 1 \
+    --hz 1000
+
+python -m franka_control.scripts.run_trajectory \
+    --robot-ip 10.100.79.71 \
+    --waypoints test_output/test_waypoints.yaml \
+    --route test-route-2 \
+    --vel-scale 0.3 \
+    --acc-scale 0.3 \
+    --time-scale 3.0
+```
+
+Validated collection and playback commands:
+
+```bash
+python -m franka_control.scripts.collect_episodes \
+    --robot-ip 10.100.79.71 \
+    --gripper-host 10.100.79.71 \
+    --repo-id test/franka_media \
+    --root test_output/franka_media \
+    --task-name "media capture validation" \
+    --device keyboard \
+    --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --fps 30 \
+    --num-episodes 1 \
+    --cameras config/cameras.yaml \
+    --display auto
+
+python -m franka_control.scripts.collect_episodes \
+    --robot-ip 10.100.79.71 \
+    --gripper-host 10.100.79.71 \
+    --repo-id test/franka_nocam \
+    --root test_output/franka_nocam \
+    --task-name "no camera baseline" \
+    --device keyboard \
+    --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --fps 30 \
+    --num-episodes 1 \
+    --no-camera \
+    --display off
+
+python scripts/play_dataset.py \
+    --repo-id test/franka_media \
+    --root test_output/franka_media
+
+python scripts/play_dataset.py \
+    --repo-id test/franka_nocam \
+    --root test_output/franka_nocam
+```
+
+If the dataset root already exists, `collect_episodes` is expected to fail
+unless `--resume` is passed or a new `--repo-id` / `--root` is used.
 
 ## Validation Commands
 
@@ -225,6 +349,8 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "state only validation" \
     --device keyboard \
     --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
     --fps 30 \
     --num-episodes 1 \
     --no-camera \

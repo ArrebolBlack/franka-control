@@ -31,8 +31,8 @@ Status legend:
 - `[x]` Hardware validation helper is covered by green CI.
 - `[x]` Media capture runbook is added.
 - `[x]` Release materials checklist is added.
-- `[~]` Hardware validation matrix has real setup/environment values; functional
-  validation results are not filled yet.
+- `[~]` Hardware validation matrix has real setup/environment values and core
+  workflow results; blocking-gripper camera-frame validation remains pending.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
 - `[ ]` Franka Community submission has not been sent yet.
@@ -112,18 +112,18 @@ Status legend:
 - `[x]` Fill Python and dependency versions.
 - `[x]` Record RealSense camera models, serials, firmware, and USB type.
 - `[x]` Record keyboard and SpaceMouse device details.
-- `[ ]` Validate `RobotServer`.
-- `[ ]` Validate `GripperServer`.
-- `[ ]` Validate latency measurement.
-- `[ ]` Validate keyboard teleop.
-- `[ ]` Validate SpaceMouse teleop.
-- `[ ]` Validate waypoint collection.
-- `[ ]` Validate trajectory dry-run.
-- `[ ]` Validate safe trajectory execution.
-- `[ ]` Validate RealSense camera preview.
-- `[ ]` Validate data collection with cameras.
-- `[ ]` Validate data collection with `--no-camera`.
-- `[ ]` Validate dataset player.
+- `[x]` Validate `RobotServer`.
+- `[x]` Validate `GripperServer`.
+- `[x]` Validate latency measurement.
+- `[x]` Validate keyboard teleop.
+- `[x]` Validate SpaceMouse teleop.
+- `[x]` Validate waypoint collection.
+- `[x]` Validate trajectory dry-run.
+- `[x]` Validate safe trajectory execution.
+- `[x]` Validate RealSense camera preview.
+- `[x]` Validate data collection with cameras.
+- `[x]` Validate data collection with `--no-camera`.
+- `[x]` Validate dataset player.
 - `[ ]` Validate blocking gripper operations do not freeze recorded camera frames.
 
 ## Phase 7: Release
@@ -161,8 +161,9 @@ Recommended next implementation batch:
    - `docs/assets/data-collection-preview.gif`
    - `docs/assets/dataset-player.png`
    - `docs/assets/trajectory-analysis.png`
-2. Complete issue `#2`: fill `docs/hardware_validation.md` with real tested FR3
-   values.
+2. Complete the remaining issue `#2` hardware note: confirm blocking gripper
+   operations do not freeze recorded camera frames, then do a final public
+   redaction pass over `docs/hardware_validation.md`.
 3. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
    release after media and hardware validation are ready.
 4. Complete issue `#4`: finalize Franka Community submission after release.

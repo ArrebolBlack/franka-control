@@ -74,7 +74,9 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "pick red cube" \
     --device spacemouse \
     --control-mode ee_delta \
-    --fps 60 \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
+    --fps 30 \
     --num-episodes 50 \
     --cameras config/cameras.yaml
 ```
@@ -90,6 +92,8 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "pick red cube" \
     --device keyboard \
     --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
     --fps 30 \
     --num-episodes 10
 ```
@@ -104,6 +108,10 @@ python -m franka_control.scripts.collect_episodes \
     --resume \
     --num-episodes 20
 ```
+
+If the dataset directory already exists and `--resume` is not set, dataset
+creation is expected to fail. Use `--resume` for continuation or choose a new
+`--repo-id` and `--root` for a fresh run.
 
 Headless:
 

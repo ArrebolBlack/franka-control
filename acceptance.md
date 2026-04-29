@@ -14,8 +14,8 @@ As of 2026-04-29:
   algorithm-PC paths.
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
 - Hardware validation: real setup, network, machine, dependency, camera, and
-  teleop-device values are recorded; functional robot workflow validation is
-  still pending.
+  teleop-device values are recorded; core robot workflow validation is recorded;
+  blocking-gripper camera-frame validation remains pending.
 - Release materials checklist: exists and lists the remaining external
   information, validation evidence, screenshots/GIFs, demo video, and submission
   inputs.

@@ -64,6 +64,8 @@ python -m franka_control.scripts.collect_episodes \
     --task-name "media capture validation" \
     --device keyboard \
     --control-mode ee_delta \
+    --action-scale-t 0.5 \
+    --action-scale-r 1.0 \
     --fps 30 \
     --num-episodes 1 \
     --cameras config/cameras.yaml \
