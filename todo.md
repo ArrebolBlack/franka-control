@@ -27,6 +27,7 @@ Status legend:
 - `[x]` GitHub Actions v6 upgrade completed and CI remains green.
 - `[x]` GitHub About description and topics are set.
 - `[x]` GitHub release-blocker milestone and issues are created.
+- `[x]` GitHub issue `#1` README demo media is closed.
 - `[x]` GitHub issue `#2` hardware validation is closed.
 - `[x]` Hardware validation environment-info helper is added.
 - `[x]` Hardware validation helper is covered by green CI.
@@ -158,10 +159,8 @@ Status legend:
 
 Recommended next implementation batch:
 
-1. Close issue `#1` after confirming the final README media links render on
-   GitHub.
-2. Do a final public redaction pass over `docs/hardware_validation.md` before
+1. Do a final public redaction pass over `docs/hardware_validation.md` before
    release, especially local IPs, hostnames, paths, and camera serials.
-3. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
+2. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
    release after media and hardware validation are ready.
-4. Complete issue `#4`: finalize Franka Community submission after release.
+3. Complete issue `#4`: finalize Franka Community submission after release.

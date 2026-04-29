@@ -415,8 +415,9 @@ external artifacts are complete.
 - Dropped `data-collection-preview.gif` from the required `v0.1.0` media set;
   it remains optional because dataset playback and hardware validation already
   demonstrate camera-backed collection.
+- Commented on and closed GitHub issue `#1`
+  (`Capture README demo media assets`).
 
 ### Remaining
 
-- Confirm README media links render correctly on GitHub, then close issue `#1`.
 - Final release still needs public redaction and release creation.
