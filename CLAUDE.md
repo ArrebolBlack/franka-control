@@ -294,6 +294,7 @@ routes:
 - 轨迹规划在算法机离线完成（样条+TOPPRA），采样后逐点 `env.step()` 执行；PID 无速度前馈，用 `--time-scale 3.0` 减速（经验值）
 - 夹爪独立进程+ZMQ（aiofranka 的 GripperController 是 Robotiq，本项目新建 Franka Gripper 版本）
 - **夹爪动作必然阻塞机械臂**：pylibfranka.Gripper.grasp()/move() 在 C++ 层（libfranka）就是同步阻塞的，Franka FCI 同一时间只允许一个活跃控制连接。即使 GripperServer 用 worker 线程隔离，机械臂控制仍被挂起直到夹爪完成（grasp ~1-2s，move ~0.5s）。架构层面无法规避，这是 Franka 硬件限制。
+- **GripperServer homing 保护**：pylibfranka.Gripper.homing() 不支持与 read_once() 并发调用（会导致 homing 中断）。GripperServer 在 homing 期间暂停状态轮询（`_homing_in_progress` 标志）。move/grasp 期间状态轮询正常工作。
 - 算法机和控制机共用一个代码仓库
 - **运动学模块写死 FR3 家族**：当前固定 fr3v2 + 法兰坐标系（fr3v2_link8），URDF/mesh 内置于 `kinematics/assets/`。真机报告的 `state["ee"]` 是法兰坐标系（不是 fr3v2_hand，两者差 45° Z 轴旋转）。IK 使用 Jacobian 伪逆迭代 + 关节限位 clamp，7-DOF 冗余导致解不唯一。URDF 来源：[frankarobotics/franka_description](https://github.com/frankarobotics/franka_description)
 
@@ -311,7 +312,7 @@ Trajectory 模块已重构（planner/executor/waypoints 三层分离）并通过
 **Kinematics 模块已完成**：IKSolver（Pinocchio）提供 FK/IK，内置 FR3v2 URDF，真机验证通过（FK 0mm 误差，IK 全构型收敛）。
 **Data 模块已完成**：LeRobot v3.0 格式数据采集系统，支持 4 种控制模式（joint_abs/delta, ee_abs/delta）、多相机、阻塞操作期间状态流、多 episode 录制、resume 追加。单元测试通过（45/45），真机测试计划已就绪（`tests/REAL_ROBOT_TEST_PLAN.md`）。
 **数据集播放器已完成**：`scripts/play_dataset.py` 提供完整的数据集可视化和分析功能，支持 episode 导航、过滤（success/failure/task）、轨迹可视化、action 分布分析、截图、视频导出。
-已知 BUG 已修复（夹爪 binary 模式重复 grasp、keyboard exit_requested 不重置、input() Enter 残留）。
+已知 BUG 已修复（夹爪 binary 模式重复 grasp、keyboard exit_requested 不重置、input() Enter 残留、夹爪 homing 间歇性失败、stop 后状态卡死）。
 Scripts 已从独立目录移入 `franka_control/scripts/`。
 
 ### 数据采集功能
@@ -355,8 +356,7 @@ Scripts 已从独立目录移入 `franka_control/scripts/`。
 
 ### 未解决问题
 
-**中等问题（8-18，非关键优化，暂未处理）：**
-- 8-10: gripper_server 参数校验、stop 结果重置、轮询退避
+**中等问题（非关键优化，暂未处理）：**
 - 11-13: spacemouse 非原子读取、按钮假设、参数验证
 - 14-15: camera_manager 关闭竞态、静默旧帧
 - 18: 常量重复定义
