@@ -7,7 +7,7 @@ Release media:
 
 | File | Description |
 |---|---|
-| `system-architecture.png` | Dual-machine ZMQ architecture |
+| `system-architecture.png` | Full project architecture: dual-machine ZMQ control, data collection, trajectory, kinematics, playback, and analysis |
 | `keyboard-teleop-install-gear.mp4` | Keyboard teleoperation on a gear insertion task |
 | `spacemouse-teleop-pouring.mp4` | SpaceMouse teleoperation on a pouring task |
 | `dataset-player-fruit-basket.mp4` | Dataset playback for the fruit basket task |

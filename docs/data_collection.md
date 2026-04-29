@@ -58,13 +58,13 @@ python -m franka_control.cameras.list_cameras --format yaml
 
 ```yaml
 d435:
-  serial: "138422075015"
+  serial: "<D435_SERIAL>"
   resolution: [640, 480]
   fps: 60
   enable_depth: false
 
 d405:
-  serial: "352122274606"
+  serial: "<D405_SERIAL>"
   resolution: [640, 480]
   fps: 60
   enable_depth: false

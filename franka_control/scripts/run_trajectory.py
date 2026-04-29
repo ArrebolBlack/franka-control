@@ -12,14 +12,14 @@ Usage:
 
     # Execute on robot
     python -m franka_control.scripts.run_trajectory \\
-        --robot-ip 172.16.0.2 \\
-        --gripper-host 172.16.0.2 \\
+        --robot-ip <CONTROL_PC_IP> \\
+        --gripper-host <CONTROL_PC_IP> \\
         --waypoints config/waypoints.yaml \\
         --route pick_place
 
     # Loop execution
     python -m franka_control.scripts.run_trajectory \\
-        --robot-ip 172.16.0.2 \\
+        --robot-ip <CONTROL_PC_IP> \\
         --waypoints config/waypoints.yaml \\
         --route pick_place \\
         --loop

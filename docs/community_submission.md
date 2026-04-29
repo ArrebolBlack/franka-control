@@ -68,7 +68,7 @@ Best regards,
 ## Send Only After
 
 - `[ ]` CI is green on the public repository.
-- `[ ]` `docs/hardware_validation.md` is filled with real tested values.
+- `[x]` `docs/hardware_validation.md` is filled with real tested values.
 - `[x]` README links to real demo media.
-- `[ ]` `CHANGELOG.md` is finalized for `v0.1.0`.
+- `[x]` `CHANGELOG.md` is finalized for `v0.1.0`.
 - `[ ]` GitHub release `v0.1.0` exists.

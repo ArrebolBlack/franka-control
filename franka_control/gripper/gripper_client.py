@@ -3,7 +3,7 @@
 Runs on the algorithm machine. Communicates with GripperServer via ZMQ.
 
 Usage:
-    with GripperClient("172.16.0.2") as gripper:
+    with GripperClient("<CONTROL_PC_IP>") as gripper:
         gripper.homing()
         gripper.open()
         gripper.grasp(width=0.02, force=40.0)

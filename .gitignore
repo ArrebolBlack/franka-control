@@ -32,6 +32,8 @@ config/waypoints.yaml
 # Data (collected datasets, not source code)
 data/
 !franka_control/data/
+demo/
+test_output/
 screenshots/
 videos/
 

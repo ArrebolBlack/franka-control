@@ -5,30 +5,43 @@ ready for Franka Community submission.
 
 ## Current Acceptance Status
 
-As of 2026-04-29:
+As of 2026-04-30:
 
+- Confirmed target: make `franka-control` a high-value open-source project for
+  Franka Community submission, with Franky-class public quality but a distinct
+  no-ROS FR3 learning/data-collection focus.
 - Repository identity: complete; GitHub About description and topics are set.
 - Documentation completeness: required files exist locally and are linked from
   README or `docs/README.md`.
 - New-user quick start: complete locally with offline, control-PC, and
   algorithm-PC paths.
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
-- Hardware validation: real setup, network, machine, dependency, camera, and
-  teleop-device values are recorded; core robot workflow validation and
-  blocking-gripper camera-frame validation are recorded.
+- Hardware validation: real setup, machine, dependency, camera, and
+  teleop-device values are recorded with public redaction applied; core robot
+  workflow validation and blocking-gripper camera-frame validation are
+  recorded.
 - Release materials checklist: exists and lists the remaining external
   information, validation evidence, screenshots/GIFs, demo video, and submission
   inputs.
 - CI and offline quality gates: workflow and local checks are configured; remote
-  GitHub Actions run `25071752853` passed on `origin/main`.
+  GitHub Actions run `25119439661` passed on `origin/main`.
 - Open-source hygiene: required files and templates exist locally.
 - GitHub triage setup: required labels, `v0.1.0` milestone, and release-blocker
   issues exist.
 - Demo media: system architecture, keyboard teleop video, SpaceMouse teleop
   video, dataset playback video, trajectory figure, and action distribution
   figure are present.
-- Release readiness: blocked until final public redaction and the GitHub release
-  are complete.
+- Data-collection usability polish: RealSense camera listing/YAML generation,
+  existing-dataset guidance, and live collection overlay/FPS reporting are
+  complete.
+- Repository audit: initial high-risk items are complete locally: wheel package
+  data includes kinematics assets, generated demo/test outputs are ignored,
+  stale `collect_data.py` was removed, public redaction was applied, and
+  offline tests were expanded.
+- Release-facing docs: `README.md`, `CHANGELOG.md`, and `CITATION.cff` are
+  aligned locally for `v0.1.0` with release date `2026-04-30`.
+- Release readiness: blocked until the release tag and GitHub release are
+  complete.
 - Franka Community submission: draft exists, not ready to send.
 
 ## 1. Repository Identity
@@ -153,6 +166,8 @@ Local status:
 - `[x]` GitHub Actions v6 upgrade removed the Node.js 20 deprecation warning;
   run `25049362136` passed.
 - `[x]` Hardware validation helper is covered by CI; run `25071752853` passed.
+- `[x]` RealSense camera listing and data-collection usability polish are
+  covered by CI; run `25119439661` passed.
 
 Required local commands before release:
 
@@ -245,7 +260,7 @@ The project is ready to submit when:
 
 Submit only if all are true:
 
-- `[ ]` README is polished and accurate.
+- `[x]` README is polished and accurate.
 - `[x]` Docs are complete enough for a new user.
 - `[x]` CI is green on GitHub.
 - `[x]` Hardware validation is filled.
@@ -254,3 +269,25 @@ Submit only if all are true:
 - `[x]` The project does not overclaim official Franka support.
 - `[x]` The project clearly explains no-ROS scope and ROS relationship.
 - `[x]` Safety limitations are explicit.
+
+## 12. High-Value Open-Source Polish
+
+The repository passes this section when:
+
+- The README communicates the value proposition in the first 30 seconds.
+- The architecture diagram matches the actual dual-machine ZMQ implementation
+  and the documented data-collection/planning/analysis workflow.
+- The repository has a clear policy for demo data, test output, generated
+  files, and release media.
+- Source distributions and wheels include required non-Python runtime assets,
+  especially the bundled URDF and mesh files used by `IKSolver`.
+- Public docs do not expose private hostnames, local user paths, camera serials,
+  or lab network details.
+- Deprecated or historical scripts are either removed, documented as legacy, or
+  redirected to the supported workflow.
+- Offline tests cover the highest-risk non-hardware behavior that can be tested
+  without an FR3.
+- Any hardware-facing change has an approved modification plan, risk note, and
+  validation procedure before implementation.
+- Git commit author/committer identity is checked before every release commit;
+  contributors must not appear as Claude or any AI assistant identity.

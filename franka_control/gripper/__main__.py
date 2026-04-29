@@ -1,4 +1,4 @@
-"""Run gripper server: python -m franka_control.gripper --robot-ip 172.16.0.2"""
+"""Run gripper server: python -m franka_control.gripper --robot-ip <FRANKA_FCI_IP>"""
 
 from .gripper_server import main
 

@@ -37,8 +37,87 @@ Status legend:
 - `[x]` Hardware validation matrix has real setup/environment values and
   functional workflow results.
 - `[x]` README demo media assets are added.
+- `[x]` Data-collection usability polish is implemented and CI is green.
 - `[ ]` GitHub release is not created yet.
 - `[ ]` Franka Community submission has not been sent yet.
+
+## Confirmed Optimization Program
+
+Confirmed on 2026-04-30. The next work is an open-source readiness and
+repository-quality pass. Code changes require a file-level plan and user
+approval before execution.
+
+- `[x]` Confirm high-value open-source goal and Franka Community positioning.
+- `[x]` Record collaboration and contributor identity rules in `CLAUDE.md`.
+- `[x]` Audit repository structure, docs, tests, packaging, release blockers,
+  local/generated files, and public-redaction risk.
+- `[x]` Decide policy for untracked `demo/` and `test_output/` artifacts:
+  commit curated public samples, publish as external release assets, or keep
+  fully local and ignored.
+- `[x]` Prepare and execute a code-change proposal for packaging URDF/mesh assets in source
+  distributions and wheels.
+- `[x]` Prepare and execute a cleanup proposal for deprecated or historical files such as
+  `franka_control/scripts/collect_data.py` and ignored development notes.
+- `[x]` Prepare and execute a test-coverage proposal for robot/env/trajectory/kinematics
+  offline behavior without requiring hardware.
+- `[x]` Confirm final architecture diagram still matches the implementation and
+  update it only if needed.
+- `[x]` Run final public redaction over docs, release notes, demo metadata, and
+  generated artifacts.
+- `[x]` Finalize README with architecture, teleop, data collection, dataset
+  visualization, media links, and known limitations.
+- `[ ]` Optional: create or add a project logo only if it improves public
+  presentation without delaying release.
+
+## Architecture Review Follow-Ups
+
+- `[x]` Update or regenerate `docs/assets/system-architecture.png`.
+- `[ ]` Add an editable architecture source file if available, so future
+  architecture changes are reviewable without reverse-engineering the PNG.
+- `[x]` Decide diagram scope: final diagram should present the full project
+  architecture, including the dual-machine ZMQ control path plus data
+  collection, trajectory, kinematics, playback, and analysis tools.
+- `[ ]` Post-release: fix or clarify `--gripper-mode none` in
+  `franka_control/scripts/collect_episodes.py`; current code still creates a
+  gripper-backed `FrankaEnv`, which can make 6D no-gripper actions mismatch the
+  environment's expected 7D action space. This is not blocking `v0.1.0` because
+  the validated release workflow uses the default binary gripper path.
+- `[x]` Clarify in architecture/docs that `RobotClient.set()` is a
+  fire-and-forget latest-wins command on the ZMQ command channel, not a normal
+  request/response RPC like `connect`, `move`, or `get_state`.
+- `[ ]` Consider showing the Franka hardware-level coupling between robot and
+  gripper operations, because blocking `pylibfranka` gripper calls can pause
+  robot-side progress even though the gripper service has its own worker
+  thread.
+
+## Audit-Driven Change Proposals
+
+These are proposed work items only. Code or structural changes still require
+user approval before implementation.
+
+- `[x]` Packaging assets:
+  - Candidate files: `pyproject.toml`, optional `MANIFEST.in`, optional
+    packaging test.
+  - Goal: built wheels and source distributions must include
+    `franka_control/kinematics/assets/fr3v2.urdf` and required mesh files.
+- `[x]` Legacy data collection entry point:
+  - Candidate file: `franka_control/scripts/collect_data.py`.
+  - Goal: remove it, mark it deprecated, or redirect users to
+    `franka_control.scripts.collect_episodes`.
+- `[x]` Generated artifact policy:
+  - Candidate files: `.gitignore`, docs under `docs/assets/` or release docs.
+  - Goal: prevent `demo/*/meta` and `test_output/*/meta` files from appearing
+    as accidental untracked release material, while preserving deliberate media.
+- `[x]` Public redaction:
+  - Candidate files: `docs/hardware_validation.md`,
+    `docs/community_submission.md`, `docs/release_materials_checklist.md`.
+  - Goal: replace private hostnames, local paths, real lab IPs, and camera
+    serials with safe examples or anonymized values before release.
+- `[x]` Offline test coverage:
+  - Candidate files: tests for packaging, env action clipping/splitting,
+    trajectory route splitting/planning validation, state-recorder conversion,
+    and IK asset availability.
+  - Goal: cover high-risk non-hardware behavior without requiring an FR3.
 
 ## Phase 1: Documentation Foundation
 
@@ -133,12 +212,14 @@ Status legend:
 
 ## Phase 7: Release
 
-- `[ ]` Finalize `CHANGELOG.md`.
+- `[x]` Finalize `CHANGELOG.md`.
+- `[x]` Final public redaction pass over docs and release notes.
+- `[x]` Align `CITATION.cff` with the actual release date.
 - `[x]` Create GitHub milestone `v0.1.0`.
 - `[x]` Create release-blocker issues for media, hardware validation, release,
   and Franka Community submission.
-- `[ ]` Confirm all tests pass.
-- `[ ]` Confirm all docs links pass.
+- `[x]` Confirm all tests pass.
+- `[x]` Confirm all docs links pass.
 - `[x]` Confirm hardware validation table is filled.
 - `[ ]` Tag `v0.1.0`.
 - `[ ]` Push tag.
@@ -161,8 +242,8 @@ Status legend:
 
 Recommended next implementation batch:
 
-1. Do a final public redaction pass over `docs/hardware_validation.md` before
-   release, especially local IPs, hostnames, paths, and camera serials.
-2. Complete issue `#3`: finalize `CHANGELOG.md` and create the `v0.1.0`
-   release after media and hardware validation are ready.
+1. Add an editable architecture source file if the source used to draw the PNG
+   is available.
+2. Complete issue `#3`: tag and publish the `v0.1.0` GitHub release.
 3. Complete issue `#4`: finalize Franka Community submission after release.
+4. Post-release: fix or document the `--gripper-mode none` collection path.

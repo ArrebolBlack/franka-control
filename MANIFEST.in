@@ -1,0 +1,1 @@
+recursive-include franka_control/kinematics/assets *.urdf *.dae *.stl

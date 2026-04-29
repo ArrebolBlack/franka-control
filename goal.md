@@ -15,6 +15,30 @@ The intended public positioning is:
 > control, teleoperation, motion planning, IK, RealSense integration, and
 > LeRobot data collection.
 
+## Confirmed Working Goal
+
+Confirmed on 2026-04-30:
+
+Turn `franka-control` into a high-value open-source project suitable for a
+Franka Community submission. The project should be comparable in public quality
+to classic Franka community projects such as Franky, while keeping a distinct
+focus on a no-ROS, Python-native FR3 workflow for robot learning, teleoperation,
+data collection, trajectory execution, and dataset visualization.
+
+The core public story should be:
+
+- Practical no-ROS FR3 control from Python.
+- Clear dual-machine control architecture.
+- Real robot teleoperation workflows.
+- LeRobot-compatible demonstration data collection.
+- Dataset playback and analysis tools.
+- Hardware validation and safety boundaries that are explicit rather than
+  overclaimed.
+
+The immediate engineering objective is not to add broad new features. It is to
+audit, organize, polish, document, validate, and release the existing system so
+that a new user and a Franka Community reviewer can understand and trust it.
+
 ## Submission Goal
 
 Submit the project to Franka Community after the repository has:
@@ -29,8 +53,8 @@ Submit the project to Franka Community after the repository has:
 
 ## Current Execution Focus
 
-As of 2026-04-29, the active focus is community-readiness polish before public
-release:
+As of 2026-04-30, the active focus is final release and Franka Community
+submission preparation:
 
 - Missing docs, CI, GitHub issue templates, PR template, roadmap, and changelog
   have been added and committed locally.
@@ -55,6 +79,9 @@ release:
   dataset playback, trajectory analysis, and action distribution assets.
 - Remaining release blockers are final public redaction and the `v0.1.0` GitHub
   release.
+- The latest submitted polish adds RealSense camera listing/YAML generation,
+  clearer dataset-resume guidance, and improved live-collection feedback.
+- GitHub Actions is green on the latest `origin/main` commit.
 
 Target community categories:
 
@@ -103,6 +130,16 @@ The project should not claim to be:
 - A full training framework for robot policies.
 - A simulation benchmark.
 - A safety-certified control system.
+
+For the current optimization pass, additional non-goals are:
+
+- Do not redesign the robot control protocol without a separate approved plan.
+- Do not change hardware-facing behavior without first documenting the exact
+  files, risk, rollback path, and validation procedure.
+- Do not commit private demo datasets, local test outputs, hostnames, local
+  paths, camera serials, or lab network details.
+- Do not turn the repository into a general FR3 framework that hides its tested
+  scope. Prefer a clear, honest `v0.1.0` over broad claims.
 
 ## Relationship to ROS
 

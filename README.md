@@ -10,8 +10,8 @@ It provides a lightweight dual-machine stack with fast ZMQ state streaming, a Gy
 environment, SpaceMouse/keyboard teleoperation, waypoint and TOPPRA trajectory tools,
 Pinocchio FK/IK, RealSense camera integration, and LeRobot v3 dataset collection.
 
-> Status: active research code. The API is usable, but hardware control always requires
-> careful validation on your robot and network setup.
+> Status: `v0.1.0` release candidate. The API is usable, but hardware control
+> always requires careful validation on your robot and network setup.
 
 ## Why This Project
 
@@ -66,14 +66,19 @@ Algorithm / GPU machine                         Control / RT machine
 Python scripts, policies, cameras               Franka FCI connection
 
 FrankaEnv / teleop / collect
-RobotClient  ───── ZMQ RPC :5555 ─────────────▶ RobotServer ─▶ aiofranka
+RobotClient  ───── ZMQ command :5555 ─────────▶ RobotServer ─▶ aiofranka
 state PULL   ◀──── ZMQ stream :5557 ─────────── 1 kHz state polling
 
-GripperClient ──── ZMQ RPC :5556 ─────────────▶ GripperServer ─▶ pylibfranka
+GripperClient ──── ZMQ command :5556 ─────────▶ GripperServer ─▶ pylibfranka
 
 CameraManager ─── RealSense RGB frames
+StateStreamRecorder ─ robot state + latest camera frames
 DataCollector ─── LeRobotDataset v3
 ```
+
+`RobotClient.set()` is a fire-and-forget latest-command update for control
+loops. Other robot commands, including `connect`, `move`, `start`,
+`switch_controller`, and `get_state`, use request/response semantics.
 
 Important IP names:
 
@@ -314,10 +319,12 @@ More API examples: [`docs/api.md`](docs/api.md).
 If this repository helps your research, please cite it using [`CITATION.cff`](CITATION.cff).
 
 ```bibtex
-@software{franka_control,
+@software{yu_franka_control_2026,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
-  author = {ArrebolBlack},
+  author = {Yu, Yiqi},
+  version = {0.1.0},
   year = {2026},
+  date = {2026-04-30},
   url = {https://github.com/ArrebolBlack/franka-control}
 }
 ```

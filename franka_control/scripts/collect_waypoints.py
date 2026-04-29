@@ -5,11 +5,11 @@ for recording/managing waypoints and routes.
 
 Usage:
     python -m franka_control.scripts.collect_waypoints \\
-        --robot-ip 172.16.0.2 \\
+        --robot-ip <CONTROL_PC_IP> \\
         --waypoints config/waypoints.yaml
 
     python -m franka_control.scripts.collect_waypoints \\
-        --robot-ip 172.16.0.2 \\
+        --robot-ip <CONTROL_PC_IP> \\
         --device keyboard \\
         --waypoints config/waypoints.yaml
 

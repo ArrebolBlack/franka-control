@@ -243,7 +243,7 @@ class CameraManager:
 
         YAML format:
             d435:
-              serial: "138422075015"
+              serial: "<D435_SERIAL>"
               resolution: [640, 480]
               fps: 60
               enable_depth: false

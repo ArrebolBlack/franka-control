@@ -451,3 +451,483 @@ external artifacts are complete.
 
 - Keep generated demo datasets and test outputs local; they are intentionally
   not part of the release commit.
+
+## 2026-04-30: Overall Plan Review
+
+### Completed
+
+- Rechecked `plan.md`, `goal.md`, `progress.md`, `acceptance.md`, and
+  `todo.md` against the current repository state.
+- Confirmed open GitHub release-blocker issues are only:
+  - `#3` Prepare v0.1.0 release.
+  - `#4` Finalize Franka Community submission.
+- Confirmed latest GitHub Actions run `25119439661` passed on `origin/main`.
+- Confirmed local untracked directories are still limited to `demo/` and
+  `test_output/`, which should remain local and uncommitted.
+
+### Remaining
+
+- Final public redaction pass over documentation and release notes.
+- Finalize `CHANGELOG.md` and align `CITATION.cff` with the actual release date.
+- Rerun release checks.
+- Tag and publish `v0.1.0`.
+- Finalize and send the Franka Community submission after release.
+
+## 2026-04-30: Goal Confirmation and Readiness Audit
+
+### Completed
+
+- Confirmed the target: turn `franka-control` into a high-value open-source
+  repository suitable for Franka Community submission, comparable in public
+  quality to classic community projects such as Franky.
+- Confirmed the project boundary: no-ROS Python-native FR3 control,
+  teleoperation, trajectory execution, RealSense integration, LeRobot data
+  collection, dataset playback, and visualization.
+- Confirmed collaboration rule: code changes require a file-level modification
+  plan, user approval, and validation plan before implementation.
+- Added contributor identity rules to `CLAUDE.md`: commits/releases/PRs must
+  use the `ArrebolBlack` GitHub identity, not Claude or any AI assistant
+  identity.
+- Ran local offline checks:
+  - `python -m pytest tests -q` passed with 49 tests.
+  - `python scripts/check_markdown_links.py` passed.
+  - `git diff --check` passed.
+  - `python -m ruff check franka_control scripts tests` passed.
+- Updated `goal.md`, `todo.md`, and `acceptance.md` with the confirmed target,
+  boundaries, open-source polish criteria, and next audit tasks.
+
+### Findings
+
+- `franka_control/kinematics/assets/` is tracked by git, but current packaging
+  metadata does not yet clearly include URDF/mesh assets in built
+  distributions.
+- `docs/hardware_validation.md` contains real hostnames, local paths, IP
+  addresses, and setup details that need final public redaction before release.
+- `demo/` and `test_output/` contain untracked generated LeRobot/demo artifacts;
+  release policy needs to be decided before publishing.
+- `franka_control/scripts/collect_data.py` appears to be an older collection
+  entry point and should be reviewed before public release.
+
+### Remaining
+
+- Produce a file-level change proposal for packaging, cleanup, tests, redaction,
+  and README/architecture polish before any code edits.
+- Wait for user approval before changing behavior or removing files.
+
+## 2026-04-30: Repository Audit and Change Proposal Baseline
+
+### Current Subtask
+
+Repository audit for release blockers and high-value open-source polish.
+
+### This Round's Method
+
+- Checked contributor identity:
+  - `git config user.name` -> `ArrebolBlack`
+  - `git config user.email` -> `2078004110@qq.com`
+- Built a temporary wheel with:
+  - `python -m pip wheel . -w /tmp/franka-control-wheel-audit --no-deps`
+- Inspected wheel contents with `unzip -l`.
+- Checked tracked files, untracked generated files, ignored files, package size,
+  public-redaction hits, and old/TBD markers.
+- Read the old `franka_control/scripts/collect_data.py` entry point and current
+  data-collection tests.
+
+### Results
+
+- Temporary wheel builds, but it is only about 88K and contains no
+  `franka_control/kinematics/assets` files. A wheel install would break the
+  default `IKSolver()` because the bundled URDF/mesh files are missing.
+- `franka_control/kinematics/assets/` is tracked and is about 189M, so the
+  release needs an explicit decision: package all required assets, package only
+  the minimal FR3v2 subset needed by the default solver, or document/edit the
+  asset strategy.
+- `docs/assets/` is about 64M and already contains the intended README media.
+- `demo/` is about 299M and `test_output/` is about 5M. Their `data/` and
+  `videos/` subtrees are ignored by the existing `data/`, `videos/`, and
+  `screenshots/` ignore rules, but `meta/` files are currently untracked and
+  visible in `git status`.
+- `docs/hardware_validation.md` contains real hostnames, local paths, real lab
+  IPs, and command examples using those values. This remains a release blocker
+  until public redaction is done.
+- `franka_control/scripts/collect_data.py` appears stale: it calls the old
+  `DataCollector(repo_id=..., fps=..., cameras=...)` style API, while the
+  current collector requires `DataCollector(CollectionConfig, ...)`.
+- Current local checks remain green:
+  - `python -m pytest tests -q` passed with 49 tests.
+  - `python scripts/check_markdown_links.py` passed.
+  - `git diff --check` passed.
+  - `python -m ruff check franka_control scripts tests` passed.
+
+### Proposed File-Level Change Plan
+
+No code change has been executed yet. Proposed changes for user approval:
+
+- `pyproject.toml` plus optional `MANIFEST.in`: include required URDF/mesh
+  package data in built wheels and source distributions. Validate by rebuilding
+  a wheel and checking for `franka_control/kinematics/assets/fr3v2.urdf`.
+- `franka_control/scripts/collect_data.py`: remove the stale entry point,
+  convert it into a compatibility wrapper that exits with a clear deprecation
+  message, or update it to call the current `CollectionConfig` workflow.
+  Recommended: deprecate or remove, because `collect_episodes.py` is the
+  documented supported workflow.
+- `.gitignore`: explicitly ignore generated `demo/` and `test_output/`
+  dataset metadata unless the project decides to commit curated public samples.
+- `docs/hardware_validation.md`: redact hostnames, local paths, real lab IPs,
+  and serial-like values while preserving validation credibility.
+- Tests: add offline tests for package asset availability, trajectory route
+  splitting/planning validation, state-recorder conversion, and environment
+  action-shape/clip logic where mocking is safe.
+
+### Done Criteria for This Round
+
+- The audit has produced concrete file-level proposals.
+- The current repository baseline remains green.
+- The next step is blocked only on user approval for the proposed code and
+  structural edits.
+
+## 2026-04-30: Approved Release-Readiness Fix Batch
+
+### Current Subtask
+
+Execute the approved first batch of release-readiness fixes.
+
+### This Round's Method
+
+- Implemented only the user-approved changes:
+  - Include kinematics assets in default packaging.
+  - Delete the stale `collect_data.py` entry point if confirmed unused.
+  - Keep `demo/` and `test_output/` local by updating `.gitignore`.
+  - Redact public docs.
+  - Add offline tests for high-risk non-hardware behavior.
+- Rebuilt a temporary wheel and inspected its contents.
+- Re-ran local tests, lint, markdown links, compile checks, CLI help smoke
+  tests, and sensitive-value scans.
+
+### Changes Made
+
+- Added `MANIFEST.in`.
+- Updated `pyproject.toml` with `include-package-data` and package-data entries
+  for `franka_control.kinematics/assets`.
+- Deleted stale `franka_control/scripts/collect_data.py`. It was not referenced
+  by README, docs, tests, or CI, and it called the old `DataCollector` API.
+- Updated `.gitignore` to ignore generated `demo/` and `test_output/`
+  directories.
+- Redacted `docs/hardware_validation.md` and related examples to remove real
+  hostnames, local paths, lab IPs, and camera serial numbers.
+- Replaced serial/IP examples in `docs/data_collection.md` and selected code
+  docstrings with placeholders.
+- Added offline tests:
+  - `tests/test_kinematics_assets.py`
+  - `tests/test_state_recorder.py`
+  - `tests/test_trajectory.py`
+  - `tests/test_franka_env_logic.py`
+
+### Validation
+
+- `python -m pytest tests -q` passed with 56 tests.
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+- `python -m py_compile ...` passed for important scripts and helpers.
+- `python -m ruff check franka_control scripts tests` passed.
+- CLI `--help` smoke tests passed for robot, gripper, teleop,
+  `collect_episodes`, `collect_waypoints`, `run_trajectory`,
+  `measure_latency`, camera listing, dataset player, and validation-info
+  helper.
+- Temporary wheel validation:
+  - Command: `python -m pip wheel . -w /tmp/franka-control-wheel-audit-fixed --no-deps`
+  - Wheel size: about 52M.
+  - Wheel contains `franka_control/kinematics/assets/fr3v2.urdf`.
+  - Wheel contains required FR3v2 mesh files such as `link0.dae` and
+    `link0.stl`.
+- Sensitive-value scan no longer finds the previously identified real hostnames,
+  local paths, lab IPs, or camera serials.
+- `git status --short -uall` no longer shows untracked generated files under
+  `demo/` or `test_output/`.
+
+### Remaining
+
+- Review whether the final architecture diagram still matches the code.
+- Finalize `CHANGELOG.md` and align `CITATION.cff` with the actual release date.
+- Rerun full release checks after any remaining README/release-note changes.
+- Tag and publish `v0.1.0`, then finalize Franka Community submission.
+
+## 2026-04-30: Architecture Review and Diagram Comparison
+
+### Current Subtask
+
+Carefully inspect the code architecture and compare it with the current
+architecture documentation/diagram before the final README and release polish.
+
+### This Round's Method
+
+- Traced the main runtime paths:
+  - `RobotServer`/`RobotClient`.
+  - `GripperServer`/`GripperClient`.
+  - `FrankaEnv`.
+  - `collect_episodes.py`.
+  - `StateStreamRecorder`.
+  - `CameraManager`.
+  - teleoperation providers.
+  - trajectory planning/execution.
+  - kinematics/IK assets.
+  - dataset playback.
+- Checked architecture references in `README.md`, `docs/assets/README.md`,
+  and release/media documentation.
+- Inspected `docs/assets/system-architecture.png` metadata and searched for an
+  editable source file. No Mermaid, SVG source, or diagram source file exists in
+  the repository.
+- Attempted local OCR/text extraction from the PNG; it did not produce usable
+  text. The comparison therefore uses the README architecture block as the
+  current diagram contract.
+
+### Implementation Architecture Summary
+
+- Algorithm machine:
+  - Python user code, scripts, `FrankaEnv`, teleop devices, trajectory tools,
+    kinematics/IK, camera ingestion, data collection, and dataset playback.
+  - `RobotClient` uses a ZMQ DEALER command socket on port `5555` and a PULL
+    state socket on port `5557`.
+  - `GripperClient` uses a ZMQ DEALER command socket on port `5556`.
+- Control machine:
+  - `RobotServer` owns the `pylibfranka`/`aiofranka` robot connection and binds
+    the command endpoint plus PUSH state stream.
+  - `GripperServer` owns the `pylibfranka.Gripper` connection and runs gripper
+    commands in a worker thread.
+- Data collection:
+  - `collect_episodes.py` combines `FrankaEnv`, teleop provider,
+    `CameraManager`, `StateStreamRecorder`, and `DataCollector`.
+  - `StateStreamRecorder` is the bridge that continuously samples robot state
+    and latest camera frames while the collection loop sends actions.
+- Planning/analysis:
+  - Trajectory modules provide offline route planning and execution through
+    `FrankaEnv`.
+  - `IKSolver` uses bundled FR3v2 URDF/mesh assets through Pinocchio.
+  - `scripts/play_dataset.py` is an offline dataset visualization entry point.
+
+### Diagram Comparison
+
+- The current architecture documentation is correct at the high level for the
+  dual-machine no-ROS ZMQ design:
+  - algorithm/GPU machine talks to a control/RT machine;
+  - robot commands use port `5555`;
+  - robot state stream uses port `5557`;
+  - gripper commands use port `5556`;
+  - data collection integrates robot state, actions, and RealSense images.
+- The diagram/documentation is incomplete for the final high-value open-source
+  presentation if it is meant to describe the whole project:
+  - It should show `StateStreamRecorder`, because it is the key bridge between
+    environment stepping, camera capture, and LeRobot writing.
+  - It should either show or intentionally exclude `TrajectoryPlanner`,
+    `WaypointStore`, `IKSolver`, dataset playback, and offline analysis.
+  - It should clarify that `RobotClient.set()` is fire-and-forget/latest-wins on
+    the command channel, while commands such as `connect`, `move`, `start`,
+    `switch_controller`, and `get_state` are request/response style calls.
+  - It should make the FCI/private robot network versus algorithm-to-control PC
+    network distinction obvious enough for a new hardware user.
+- Maintainability issue: `docs/assets/system-architecture.png` has no editable
+  source file, so future architecture reviews cannot easily diff or regenerate
+  the diagram.
+
+### Findings
+
+- No business code was changed in this review round.
+- `todo.md` now tracks architecture follow-ups:
+  - regenerate the architecture PNG with editable source;
+  - decide whether the final diagram is minimal dual-machine control or full
+    project architecture;
+  - fix or document the `--gripper-mode none` behavior in
+    `collect_episodes.py`;
+  - clarify the `RobotClient.set()` semantics;
+  - consider showing robot/gripper hardware-level coupling.
+- Potential bug identified for a later approved code-change batch:
+  `collect_episodes.py --gripper-mode none` disables the teleop gripper mode but
+  still passes a gripper host into `FrankaEnv`, so no-gripper 6D actions can
+  mismatch the environment's 7D action space.
+
+### Done Criteria for This Round
+
+- The real implementation architecture has been traced across control, gripper,
+  environment, data, camera, trajectory, kinematics, teleop, and visualization
+  modules.
+- Architecture diagram/documentation gaps have been recorded as actionable
+  follow-ups.
+- No source behavior was changed without a separate user-approved code plan.
+
+## 2026-04-30: README, Changelog, and Citation Release Pass
+
+### Current Subtask
+
+Finalize the release-facing `README.md`, `CHANGELOG.md`, and `CITATION.cff`
+wording for the intended `v0.1.0` release.
+
+### This Round's Method
+
+- Checked `README.md`, `CHANGELOG.md`, `CITATION.cff`,
+  `docs/community_submission.md`, and release checklist references for release
+  date, version, demo media, architecture, and citation consistency.
+- Updated `README.md` to:
+  - mark the repository as a `v0.1.0` release candidate;
+  - clarify command-channel versus state-stream architecture wording;
+  - add `StateStreamRecorder` to the text architecture block;
+  - clarify that `RobotClient.set()` is fire-and-forget/latest-command, while
+    other robot commands use request/response semantics;
+  - align the BibTeX example with `CITATION.cff`.
+- Updated `CHANGELOG.md` to finalize `0.1.0` with release date `2026-04-30`
+  and include release notes for hardware validation, packaging assets, redaction,
+  generated artifact policy, and removal of the stale `collect_data` entry
+  point.
+- Updated `CITATION.cff` release date to `2026-04-30`.
+- Updated `todo.md`, `acceptance.md`, and `docs/community_submission.md` to
+  reflect the completed local release-doc pass.
+
+### Validation
+
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+- `python -m pytest tests -q` passed with 56 tests and 5 warnings.
+- `CITATION.cff` parsed with PyYAML and contains the required release metadata.
+- `README.md`, `CHANGELOG.md`, and `CITATION.cff` have no remaining
+  `Unreleased`, old `2026-04-27`, stale `author = {ArrebolBlack}`, or `TBD`
+  markers.
+- Known sensitive-value scan over README, changelog, citation, and docs found no
+  matches for the previously identified lab IPs, hostnames, local paths, or
+  camera serials.
+
+### Remaining
+
+- Decide whether to regenerate the architecture PNG with editable source before
+  release, or ship the current PNG with the corrected README text.
+- Decide whether the `--gripper-mode none` behavior must be fixed before
+  `v0.1.0` or tracked as a post-release bug.
+- Tag and publish `v0.1.0`, then update the Franka Community submission with
+  the final GitHub Release URL.
+
+## 2026-04-30: Updated Architecture Diagram Integrated
+
+### Current Subtask
+
+Integrate the updated architecture diagram into the release asset path and
+record the diagram status.
+
+### This Round's Method
+
+- Checked the updated image asset supplied in `docs/assets/`.
+- Replaced the README-linked asset path
+  `docs/assets/system-architecture.png` with the updated diagram.
+- Confirmed the final checked-in architecture image metadata:
+  - PNG image.
+  - `2752 x 1536`.
+  - RGB color.
+  - About `4.6M`.
+- Kept the stable README path unchanged so existing docs continue to link to
+  `docs/assets/system-architecture.png`.
+- Updated `docs/assets/README.md`, `todo.md`, and `acceptance.md` to reflect
+  the refreshed full-project architecture diagram.
+
+### Validation
+
+- `docs/assets/system-architecture.png` exists at the path referenced by
+  `README.md`.
+- The temporary Chinese-named architecture image file was folded into the stable
+  release asset path and is no longer present as a duplicate untracked file.
+- OCR/text validation could not be run because `tesseract` is not installed in
+  the current environment.
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+
+### Remaining
+
+- Add the editable source used to draw the architecture diagram if it is
+  available.
+- Review the remaining `--gripper-mode none` follow-up before release.
+
+## 2026-04-30: Architecture Diagram v2 Replacement
+
+### Current Subtask
+
+Replace the release architecture diagram with the user-provided
+`franka-control架构图2.png` asset.
+
+### This Round's Method
+
+- Located the new image at `docs/assets/franka-control架构图2.png`.
+- Confirmed both the previous standard asset and the new image were PNG files
+  with the same `2752 x 1536` RGB dimensions.
+- Moved the new image into the stable README-linked path:
+  `docs/assets/system-architecture.png`.
+- Removed the duplicate temporary Chinese-named file by folding it into the
+  standard release asset path.
+
+### Validation
+
+- `docs/assets/system-architecture.png` now points to the v2 architecture image.
+- The README path remains stable and does not need to change.
+
+## 2026-04-30: Release Continues with Gripper-None Bug Deferred
+
+### Current Subtask
+
+Continue the `v0.1.0` release path without changing the
+`collect_episodes.py --gripper-mode none` behavior.
+
+### This Round's Method
+
+- Reviewed the `--gripper-mode none` issue and confirmed it is outside the
+  validated release workflow, which uses the default binary gripper path.
+- Deferred the bug to a post-release follow-up instead of changing hardware-facing
+  data-collection behavior immediately before release.
+- Confirmed commit/release identity before continuing:
+  - `git config user.name` is `ArrebolBlack`.
+  - `git config user.email` is `2078004110@qq.com`.
+  - GitHub CLI is authenticated as `ArrebolBlack`.
+
+### Remaining
+
+- Run final release checks.
+- Commit the release-readiness changes.
+- Push `main`, tag `v0.1.0`, push the tag, and create the GitHub Release.
+- Track the `--gripper-mode none` collection path as a post-release issue.
+
+## 2026-04-30: Final Local Release Checks
+
+### Current Subtask
+
+Run the final local checks before committing and publishing `v0.1.0`.
+
+### This Round's Method
+
+- Kept the `--gripper-mode none` issue deferred and did not change data
+  collection behavior.
+- Ran the local release gate commands.
+- Built a release wheel and inspected required bundled kinematics assets.
+- Checked whether `v0.1.0` already exists locally or on GitHub.
+
+### Validation
+
+- `python -m pytest tests -q` passed with 56 tests and 5 warnings.
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+- `python -m ruff check franka_control scripts tests` passed.
+- Important scripts passed `python -m py_compile`.
+- CLI `--help` smoke tests passed for robot, gripper, teleop,
+  `collect_episodes`, `collect_waypoints`, `run_trajectory`,
+  `measure_latency`, camera listing, dataset player, and validation-info helper.
+- Sensitive-value scan found no matches for the previously identified lab IPs,
+  hostnames, local paths, or camera serials.
+- Built wheel:
+  `python -m pip wheel . -w /tmp/franka-control-release-wheel --no-deps`.
+- Wheel contains required kinematics assets:
+  - `franka_control/kinematics/assets/fr3v2.urdf`.
+  - `franka_control/kinematics/assets/meshes/robots/fr3v2/visual/link0.dae`.
+  - `franka_control/kinematics/assets/meshes/robots/fr3v2/collision/link0.stl`.
+- Local tag `v0.1.0` does not exist yet.
+- GitHub Release `v0.1.0` does not exist yet.
+- Latest public GitHub Actions run on `origin/main` before this release commit
+  is still green: run `25119439661`.
+
+### Remaining
+
+- Commit and push the release-readiness changes.
+- Tag and publish `v0.1.0`.
+- Create a GitHub Release and let CI run on the pushed commit/tag.

@@ -9,7 +9,7 @@ repository-code: "https://github.com/ArrebolBlack/franka-control"
 url: "https://github.com/ArrebolBlack/franka-control"
 license: "Apache-2.0"
 version: "0.1.0"
-date-released: "2026-04-27"
+date-released: "2026-04-30"
 keywords:
   - Franka Research 3
   - robot control
@@ -18,4 +18,3 @@ keywords:
   - reinforcement learning
   - LeRobot
   - no ROS
-

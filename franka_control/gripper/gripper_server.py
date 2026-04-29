@@ -9,7 +9,7 @@ Three threads:
   - State thread:  polls readOnce() at configurable Hz, caches result
 
 Usage:
-    python -m franka_control.gripper.gripper_server --robot-ip 172.16.0.2
+    python -m franka_control.gripper.gripper_server --robot-ip <FRANKA_FCI_IP>
 """
 
 from __future__ import annotations

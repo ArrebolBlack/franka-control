@@ -63,6 +63,16 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["franka_control*"]
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"franka_control.kinematics" = [
+    "assets/*.urdf",
+    "assets/meshes/**/*.dae",
+    "assets/meshes/**/*.stl",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

@@ -8,7 +8,7 @@ Franka Research 3 user can understand, install, run, verify, and trust.
 
 ## Current Status
 
-As of 2026-04-29:
+As of 2026-04-30:
 
 - Phase 1 documentation foundation is complete.
 - Phase 2 quick-start expansion is complete locally.
@@ -30,6 +30,11 @@ As of 2026-04-29:
 - Hardware validation helper script is added to reduce manual setup reporting.
 - GitHub Actions run `25071752853` passed after adding validation helper
   coverage.
+- Data-collection usability polish is complete: RealSense camera listing,
+  starter `config/cameras.yaml` output, clearer dataset-resume errors, and
+  live collection overlay/FPS reporting are implemented.
+- GitHub Actions run `25119439661` passed on `origin/main` after the
+  data-collection helper polish.
 - Media capture runbook is updated with the final README video and figure asset
   set.
 - Release materials checklist exists to guide collection of hardware details,
@@ -38,8 +43,8 @@ As of 2026-04-29:
   `docs/hardware_validation.md`.
 - Core hardware workflow results are recorded, including blocking-gripper
   camera-frame validation.
-- Phase 7 release and Phase 8 Franka Community submission are blocked until
-  final public redaction and GitHub release steps are complete.
+- Phase 7 release and Phase 8 Franka Community submission are the only
+  remaining major phases.
 
 ## 1. Project Positioning
 

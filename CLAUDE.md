@@ -19,6 +19,16 @@ Franka Research 3 机械臂控制库。双机架构：算法机（GPU, Python）
 6. **拒绝膨胀** — 每阶段完成后审查清理死代码和临时补丁
 7. **教用户** — 用户问就解释，帮用户理解
 
+## Git 提交身份规则
+
+- GitHub commit/release/PR 中的 contributor 不能是 Claude、Claude Code、
+  claude.ai 或任何 AI 助手身份。
+- 所有提交作者和提交者身份必须使用 `ArrebolBlack` 对应的 GitHub 身份。
+- 提交前必须检查 `git config user.name` 和 `git config user.email`；如果不是
+  `ArrebolBlack` 的身份，先停止并让用户确认正确邮箱后再提交。
+- 如果需要修改代码，先整体列出拟修改文件、修改原因、风险和验证方式；用户确认后
+  才执行，避免破坏现有源代码功能。
+
 ## 开发命令
 
 ### 安装依赖
