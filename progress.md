@@ -385,6 +385,8 @@ external artifacts are complete.
   dataset correctness.
 - Updated `todo.md`, `acceptance.md`, `goal.md`, and `plan.md` to mark
   hardware validation as filled.
+- Commented on and closed GitHub issue `#2`
+  (`Fill hardware validation matrix for FR3 setup`).
 
 ### Remaining
 

@@ -192,6 +192,8 @@ GitHub tracking status:
 - `[x]` Required labels exist.
 - `[x]` Milestone `v0.1.0` exists.
 - `[x]` Release-blocker issues `#1` through `#4` exist.
+- `[x]` Issue `#2` hardware validation is closed after filling
+  `docs/hardware_validation.md`.
 
 ## 8. Demo Media
 

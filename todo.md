@@ -27,6 +27,7 @@ Status legend:
 - `[x]` GitHub Actions v6 upgrade completed and CI remains green.
 - `[x]` GitHub About description and topics are set.
 - `[x]` GitHub release-blocker milestone and issues are created.
+- `[x]` GitHub issue `#2` hardware validation is closed.
 - `[x]` Hardware validation environment-info helper is added.
 - `[x]` Hardware validation helper is covered by green CI.
 - `[x]` Media capture runbook is added.
