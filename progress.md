@@ -303,3 +303,38 @@ external artifacts are complete.
 
 - The checklist still needs to be filled by running the real FR3 validation
   workflow and capturing the requested media assets.
+
+## 2026-04-29: Hardware Setup and Environment Values
+
+### Completed
+
+- Recorded initial real setup values in `docs/hardware_validation.md`:
+  - Franka FCI IP `172.16.0.2`.
+  - Control PC IP `10.100.79.71`.
+  - Algorithm PC IP `10.100.74.202`.
+  - Franka Research 3 `Arm3Rv2`.
+  - Franka Control `5.9.2` and system image `5.9.2`.
+  - Franka Hand with default configuration.
+  - Control PC Ubuntu 24.04.4 LTS with `6.8.1-1046-realtime` PREEMPT_RT
+    kernel.
+  - Algorithm PC Ubuntu 24.04.4 LTS with `6.17.0-22-generic` kernel.
+  - Control PC and algorithm PC Python/package environment outputs.
+  - Intel RealSense D405 and D435 camera details.
+  - Standard keyboard and 3Dconnexion SpaceMouse Compact device details.
+- Confirmed service default ports from source:
+  - Robot RPC `5555`.
+  - Gripper RPC `5556`.
+  - Robot state stream `5557`.
+- Updated `todo.md`, `acceptance.md`, `goal.md`, and `plan.md` to reflect
+  that setup/environment details are recorded while functional validation is
+  still pending.
+
+### Remaining
+
+- Re-run the environment helper after both machines are synchronized to the same
+  commit; the provided outputs reported `99a8d9c` on the control PC and
+  `63b029c` on the algorithm PC.
+- Functional hardware validation is still pending:
+  `RobotServer`, `GripperServer`, latency, teleop, waypoint, trajectory,
+  camera preview, data collection, dataset player, and blocking-gripper checks.
+- Real README screenshots/GIFs are still pending.

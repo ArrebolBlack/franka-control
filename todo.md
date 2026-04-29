@@ -31,7 +31,8 @@ Status legend:
 - `[x]` Hardware validation helper is covered by green CI.
 - `[x]` Media capture runbook is added.
 - `[x]` Release materials checklist is added.
-- `[~]` Hardware validation matrix exists but real tested values are not filled yet.
+- `[~]` Hardware validation matrix has real setup/environment values; functional
+  validation results are not filled yet.
 - `[ ]` Real screenshots/GIFs are not added yet.
 - `[ ]` GitHub release is not created yet.
 - `[ ]` Franka Community submission has not been sent yet.
@@ -104,10 +105,13 @@ Status legend:
 ## Phase 6: Hardware Validation
 
 - `[x]` Add helper to collect environment/package versions for validation.
-- `[ ]` Fill robot model and Franka system version.
-- `[ ]` Fill control PC OS and kernel.
-- `[ ]` Fill algorithm PC OS.
-- `[ ]` Fill Python and dependency versions.
+- `[x]` Fill robot model and Franka system version.
+- `[x]` Fill network addresses and default service ports.
+- `[x]` Fill control PC OS and kernel.
+- `[x]` Fill algorithm PC OS.
+- `[x]` Fill Python and dependency versions.
+- `[x]` Record RealSense camera models, serials, firmware, and USB type.
+- `[x]` Record keyboard and SpaceMouse device details.
 - `[ ]` Validate `RobotServer`.
 - `[ ]` Validate `GripperServer`.
 - `[ ]` Validate latency measurement.

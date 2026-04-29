@@ -31,6 +31,9 @@ As of 2026-04-29:
 - Media capture runbook exists for the remaining real workflow screenshots/GIFs.
 - Release materials checklist exists to guide collection of hardware details,
   validation evidence, media files, demo links, and submission inputs.
+- Initial real setup/environment values are recorded in
+  `docs/hardware_validation.md`; functional validation results are still
+  pending.
 - Phase 7 release and Phase 8 Franka Community submission are blocked until
   hardware validation, demo media, and GitHub release steps are complete.
 

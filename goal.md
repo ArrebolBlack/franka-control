@@ -43,6 +43,9 @@ release:
 - A release materials checklist is available for collecting hardware details,
   validation evidence, screenshots/GIFs, demo video links, and submission
   inputs.
+- Initial real setup details are recorded, including FR3 version, network
+  addresses, control/algorithm PC environments, RealSense devices, and teleop
+  device details.
 - Remaining release blockers are real hardware validation, real demo media, and
   the `v0.1.0` GitHub release.
 

@@ -13,7 +13,9 @@ As of 2026-04-29:
 - New-user quick start: complete locally with offline, control-PC, and
   algorithm-PC paths.
 - ROS relationship: documented in README and `docs/ros_comparison.md`.
-- Hardware validation: matrix exists, but real tested values are still pending.
+- Hardware validation: real setup, network, machine, dependency, camera, and
+  teleop-device values are recorded; functional robot workflow validation is
+  still pending.
 - Release materials checklist: exists and lists the remaining external
   information, validation evidence, screenshots/GIFs, demo video, and submission
   inputs.
