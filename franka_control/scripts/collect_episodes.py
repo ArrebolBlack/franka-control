@@ -146,7 +146,7 @@ class Display:
         self,
         images: dict[str, np.ndarray],
         state: str,
-        fps: int = 0,
+        fps: float = 0,
         frame_count: int = 0,
     ) -> None:
         """Show concatenated camera feeds and pump the OpenCV event loop."""
@@ -180,7 +180,7 @@ class Display:
 
         parts = []
         if fps > 0:
-            parts.append(f"FPS: {fps}")
+            parts.append(f"FPS: {int(fps)}")
         if frame_count > 0:
             parts.append(f"Frames: {frame_count}")
         if parts:
@@ -544,7 +544,11 @@ def main():
                         raw_action[:7] *= dt
                     env.step(raw_action)
                     _read_cameras(cameras, config, last_images)
-                    display.show(last_images, "PREVIEW - Press S to start")
+                    if args.device == "spacemouse":
+                        overlay = "PREVIEW - Press S=start E=end F=discard Q=quit"
+                    else:
+                        overlay = "PREVIEW - Press S to start"
+                    display.show(last_images, overlay)
                     elapsed = time.perf_counter() - loop_start
                     if elapsed < dt:
                         time.sleep(dt - elapsed)
@@ -584,19 +588,27 @@ def main():
                     sec_frames += 1
 
                 # Show camera display (main thread — freezes during gripper blocking)
+                window_elapsed = time.perf_counter() - sec_t0
+                current_fps = sec_frames / max(window_elapsed, 1e-3)
+                if args.device == "spacemouse":
+                    rec_overlay = "REC - E=end F=discard Q=quit"
+                else:
+                    rec_overlay = "REC - Esc=end"
                 display.show(
                     recorder.last_images or last_images,
-                    "RECORDING",
-                    fps=sec_frames,
+                    rec_overlay,
+                    fps=current_fps,
                     frame_count=record_count,
                 )
 
                 # Per-second FPS report
                 now = time.perf_counter()
-                if now - sec_t0 >= 1.0:
+                window_elapsed = now - sec_t0
+                if window_elapsed >= 1.0:
+                    window_fps = sec_frames / window_elapsed
                     logger.info(
-                        "[1s] %d fps | total frames=%d",
-                        sec_frames, record_count,
+                        "[1s] %.1f fps | total frames=%d",
+                        window_fps, record_count,
                     )
                     sec_frames = 0
                     sec_t0 = now

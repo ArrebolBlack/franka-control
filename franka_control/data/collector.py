@@ -56,17 +56,24 @@ class DataCollector:
                     f"Expected: {expected_features}"
                 )
         else:
-            self.dataset = LeRobotDataset.create(
-                repo_id=config.repo_id,
-                root=str(config.root),
-                fps=config.fps,
-                features=features,
-                robot_type=config.robot_type,
-                use_videos=config.use_videos,
-                streaming_encoding=config.streaming_encoding,
-                encoder_threads=config.encoder_threads,
-                encoder_queue_maxsize=config.encoder_queue_maxsize,
-            )
+            try:
+                self.dataset = LeRobotDataset.create(
+                    repo_id=config.repo_id,
+                    root=str(config.root),
+                    fps=config.fps,
+                    features=features,
+                    robot_type=config.robot_type,
+                    use_videos=config.use_videos,
+                    streaming_encoding=config.streaming_encoding,
+                    encoder_threads=config.encoder_threads,
+                    encoder_queue_maxsize=config.encoder_queue_maxsize,
+                )
+            except FileExistsError:
+                raise FileExistsError(
+                    f"Dataset directory already exists: {config.root}\n"
+                    f"  To append episodes, add --resume\n"
+                    f"  To start fresh, delete it first: rm -rf {config.root}"
+                )
 
         self._episode_active = False
         self._current_instruction = None

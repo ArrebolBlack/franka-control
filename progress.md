@@ -421,3 +421,33 @@ external artifacts are complete.
 ### Remaining
 
 - Final release still needs public redaction and release creation.
+
+## 2026-04-29: Data Collection Usability Polish
+
+### Completed
+
+- Added `python -m franka_control.cameras.list_cameras` to list connected
+  RealSense devices and print starter `config/cameras.yaml` snippets.
+- Added unit tests for the RealSense camera-listing helper.
+- Improved `DataCollector`'s existing-dataset error message so users know to
+  pass `--resume` or choose a fresh dataset root.
+- Improved `collect_episodes` OpenCV overlay text and FPS reporting during
+  preview/recording.
+- Documented the camera listing helper in `docs/data_collection.md`,
+  `docs/quickstart.md`, `docs/README.md`, and the release checklist.
+
+### Validation
+
+- `python -m pytest tests -q` passed with 49 tests.
+- `python -m ruff check franka_control scripts tests` passed.
+- `python -m py_compile franka_control/data/collector.py franka_control/scripts/collect_episodes.py franka_control/cameras/list_cameras.py` passed.
+- `python -m franka_control.cameras.list_cameras --help` passed.
+- `python -m franka_control.cameras.list_cameras --format yaml` printed the
+  detected RealSense devices as a YAML snippet.
+- `python scripts/check_markdown_links.py` passed.
+- `git diff --check` passed.
+
+### Remaining
+
+- Keep generated demo datasets and test outputs local; they are intentionally
+  not part of the release commit.

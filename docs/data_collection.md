@@ -42,6 +42,18 @@ The end-effector action rotation is a rotation vector.
 
 ## Camera Configuration
 
+List connected RealSense cameras on the algorithm PC:
+
+```bash
+python -m franka_control.cameras.list_cameras
+```
+
+To print a starter YAML snippet:
+
+```bash
+python -m franka_control.cameras.list_cameras --format yaml
+```
+
 `config/cameras.yaml`:
 
 ```yaml

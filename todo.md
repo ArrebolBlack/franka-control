@@ -31,6 +31,7 @@ Status legend:
 - `[x]` GitHub issue `#2` hardware validation is closed.
 - `[x]` Hardware validation environment-info helper is added.
 - `[x]` Hardware validation helper is covered by green CI.
+- `[x]` RealSense camera listing helper is added.
 - `[x]` Media capture runbook is added.
 - `[x]` Release materials checklist is added.
 - `[x]` Hardware validation matrix has real setup/environment values and
@@ -128,6 +129,7 @@ Status legend:
 - `[x]` Validate data collection with `--no-camera`.
 - `[x]` Validate dataset player.
 - `[x]` Validate blocking gripper operations do not freeze recorded camera frames.
+- `[x]` Add helper to list RealSense serials and generate camera YAML snippets.
 
 ## Phase 7: Release
 

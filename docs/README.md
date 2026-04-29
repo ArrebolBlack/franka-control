@@ -42,4 +42,5 @@ Useful repository helpers:
 ```bash
 python scripts/check_markdown_links.py
 python scripts/collect_validation_info.py --format markdown
+python -m franka_control.cameras.list_cameras --format yaml
 ```

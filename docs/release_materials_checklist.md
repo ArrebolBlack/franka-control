@@ -29,8 +29,8 @@
 | 控制 PC Python 版本和关键依赖版本 | `aiofranka`、`pylibfranka` 等控制侧依赖是否可用需要被记录。 | 在控制 PC 仓库环境中运行 `python scripts/collect_validation_info.py --format markdown`，复制输出到硬件验证资料中。 |
 | 算法 PC 操作系统版本 | 算法 PC 运行相机、teleop、数据采集和 dataset player，OS/GUI 环境会影响结果。 | 在算法 PC 上运行 `lsb_release -a` 或 `cat /etc/os-release`。 |
 | 算法 PC Python 版本和关键依赖版本 | 证明数据采集、相机、LeRobot、OpenCV 等软件环境可复现。 | 在算法 PC 仓库环境中运行 `python scripts/collect_validation_info.py --format markdown --probe-realsense`。 |
-| RealSense 相机型号、序列号、固件版本、USB 连接方式 | 多相机数据采集需要精确序列号；固件/USB 信息能帮助排查丢帧和带宽问题。 | 优先运行 `python scripts/collect_validation_info.py --format markdown --probe-realsense`；也可以用 `rs-enumerate-devices` 交叉确认。 |
-| `config/cameras.yaml` 中的最终相机配置 | 数据采集命令依赖这个文件；README demo 需要能复现同样的相机视角。 | 打开并核对 `config/cameras.yaml`，确认名称、序列号、分辨率、FPS 与真实设备一致。 |
+| RealSense 相机型号、序列号、固件版本、USB 连接方式 | 多相机数据采集需要精确序列号；固件/USB 信息能帮助排查丢帧和带宽问题。 | 优先运行 `python scripts/collect_validation_info.py --format markdown --probe-realsense`；也可以运行 `python -m franka_control.cameras.list_cameras` 或 `rs-enumerate-devices` 交叉确认。 |
+| `config/cameras.yaml` 中的最终相机配置 | 数据采集命令依赖这个文件；README demo 需要能复现同样的相机视角。 | 运行 `python -m franka_control.cameras.list_cameras --format yaml` 生成 starter YAML，再核对名称、序列号、分辨率、FPS 与真实设备一致。 |
 | Teleop 设备型号 | README 和硬件验证需要说明 keyboard / SpaceMouse 的真实设备条件。 | 记录键盘类型；SpaceMouse 可通过 `lsusb`、设备包装、系统设置或实验室设备登记确认型号。 |
 | SpaceMouse Linux 权限状态 | 如果 SpaceMouse 权限未配置，teleop demo 会失败。 | 插入 SpaceMouse 后运行相关 teleop 命令；如失败，按 README 中 udev 规则配置后记录结果。 |
 

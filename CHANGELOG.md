@@ -17,6 +17,7 @@ semantic versioning once public releases begin.
 - Waypoint capture, route storage, and TOPPRA trajectory execution tools.
 - Pinocchio-based FK/IK utilities.
 - RealSense RGB camera integration.
+- RealSense camera listing helper for filling `config/cameras.yaml`.
 - LeRobot v3 dataset collection, resume, success/failure annotation, playback,
   screenshot export, video export, trajectory visualization, and action
   analysis.
@@ -27,11 +28,15 @@ semantic versioning once public releases begin.
   contributing guide, security policy, roadmap, issue templates, pull request
   template, and CI workflow.
 
+### Changed
+
+- Improved `collect_episodes` preview overlays and FPS reporting during live
+  collection.
+- Improved the dataset-exists error message to point users to `--resume` or a
+  fresh dataset root.
+
 ### Known Limitations
 
-- Real hardware validation is still pending exact tested setup values.
-- Demo screenshots and GIFs are still placeholders until a safe real-hardware
-  capture session is completed.
 - The project is not official Franka Robotics software.
 - The project does not provide ROS TF, RViz, MoveIt, or ROS bag integration.
 - Real robot use requires local safety review, conservative first motions, and

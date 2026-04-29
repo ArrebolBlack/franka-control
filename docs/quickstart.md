@@ -53,6 +53,7 @@ python -m py_compile \
     franka_control/scripts/collect_episodes.py \
     franka_control/scripts/teleop.py \
     franka_control/scripts/run_trajectory.py \
+    franka_control/cameras/list_cameras.py \
     scripts/play_dataset.py
 python scripts/check_markdown_links.py
 ```
@@ -73,6 +74,7 @@ python -m franka_control.scripts.collect_episodes --help
 python -m franka_control.scripts.collect_waypoints --help
 python -m franka_control.scripts.run_trajectory --help
 python -m franka_control.scripts.measure_latency --help
+python -m franka_control.cameras.list_cameras --help
 python scripts/play_dataset.py --help
 ```
 
