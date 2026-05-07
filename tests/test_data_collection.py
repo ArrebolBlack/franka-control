@@ -59,7 +59,7 @@ class TestFeatureBuilder:
             robot_ip="127.0.0.1",
             gripper_host="127.0.0.1",
             cameras=[
-                CameraConfig(name="wrist", serial="xxx", width=640, height=480),
+                CameraConfig(name="wrist", serial="xxx", width=640, height=480, depth=True),
                 CameraConfig(name="front", serial="yyy", width=1280, height=720),
             ],
         )
@@ -67,8 +67,12 @@ class TestFeatureBuilder:
 
         assert "observation.images.wrist" in features
         assert "observation.images.front" in features
+        assert "observation.depths.wrist" in features
+        assert "observation.depths.front" not in features
         assert features["observation.images.wrist"]["shape"] == (480, 640, 3)
         assert features["observation.images.front"]["shape"] == (720, 1280, 3)
+        assert features["observation.depths.wrist"]["dtype"] == "uint16"
+        assert features["observation.depths.wrist"]["shape"] == (480, 640)
 
 
 class TestCollectionConfig:

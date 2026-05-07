@@ -105,7 +105,8 @@ class DataCollector:
             action: Applied action (after clipping).
             images: Camera images {cam_name: rgb_array (H,W,3) uint8}.
             extra: Optional project-specific fields to merge into the frame
-                (caller must ensure the keys are registered in features).
+                (caller must ensure the keys are registered in features), such
+                as depth maps or task-specific annotations.
         """
         if not self._episode_active:
             raise RuntimeError("No active episode")

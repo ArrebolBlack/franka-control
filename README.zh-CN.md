@@ -222,7 +222,7 @@ d405:
   enable_depth: false
 ```
 
-`enable_depth` 和 `depth` 都兼容。采集脚本当前只保存 RGB 图像；depth 由 `CameraManager` 支持，但默认不写入 LeRobot features。
+`enable_depth` 和 `depth` 都兼容。启用 depth 的相机会在数据集中写入 `observation.depths.<camera>`，格式为 raw `uint16` 深度图 `(H,W)`；RGB 仍写入 `observation.images.<camera>`。
 
 ## 5. 网络和硬件启动流程
 
@@ -480,6 +480,7 @@ python -m franka_control.scripts.run_trajectory \
 | `observation.effort` | `(7,)` | 关节力矩 |
 | `action` | `(8,)` 或 `(7,)` | 取决于 `control_mode` |
 | `observation.images.<camera>` | `(H,W,3)` | RGB 图像，通常视频编码 |
+| `observation.depths.<camera>` | `(H,W)` | 可选 raw `uint16` 深度图 |
 | `task` | string | LeRobot task 文本 |
 
 动作维度：
@@ -594,7 +595,7 @@ Keyboard 模式：
 
 说明：
 
-- 数据层使用 `StateStreamRecorder` 后台读取机器人状态和相机帧，夹爪阻塞动作期间也能持续记录状态/图像。
+- 数据层使用 `StateStreamRecorder` 后台读取机器人状态和 RGB/depth 相机帧，夹爪阻塞动作期间也能持续记录状态/图像。
 - 显示窗口依赖 OpenCV GUI。无 GUI 环境请使用 `--display off`。
 - `collect_episodes.py` 当前是推荐采集入口，`collect_data.py` 是旧版兼容脚本。
 

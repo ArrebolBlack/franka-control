@@ -68,6 +68,12 @@ def build_franka_features(
             "shape": (cam.height, cam.width, 3),
             "names": ["height", "width", "channels"],
         }
+        if cam.depth:
+            features[f"observation.depths.{cam.name}"] = {
+                "dtype": "uint16",
+                "shape": (cam.height, cam.width),
+                "names": ["height", "width"],
+            }
 
     if extra_features:
         features.update(extra_features)

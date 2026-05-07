@@ -55,7 +55,7 @@ class StateStreamRecorder:
         self._get_cameras = cameras
         self._fps = fps
         self._dt = 1.0 / fps
-        self._queue: queue.Queue[tuple[dict, np.ndarray | None, dict]] = queue.Queue(
+        self._queue: queue.Queue[tuple[dict, np.ndarray | None, dict, dict]] = queue.Queue(
             maxsize=int(fps * buffer_seconds)
         )
         self._stop = threading.Event()
@@ -63,6 +63,7 @@ class StateStreamRecorder:
         self._gripper_target = 1.0
         self._action_fn = action_fn
         self._last_images: dict = {}
+        self._last_extra: dict = {}
         self._thread = None
 
     @property
@@ -85,6 +86,10 @@ class StateStreamRecorder:
     def last_images(self) -> dict:
         return self._last_images
 
+    @property
+    def last_extra(self) -> dict:
+        return self._last_extra
+
     def clear(self) -> None:
         while not self._queue.empty():
             self._queue.get_nowait()
@@ -103,8 +108,8 @@ class StateStreamRecorder:
             self._thread.join(timeout=timeout)
             self._thread = None
 
-    def drain(self) -> list[tuple[dict, np.ndarray | None, dict]]:
-        """Return all accumulated (obs, action, images) and clear the queue."""
+    def drain(self) -> list[tuple[dict, np.ndarray | None, dict, dict]]:
+        """Return all accumulated (obs, action, images, extra) and clear the queue."""
         frames = []
         while not self._queue.empty():
             frames.append(self._queue.get_nowait())
@@ -125,17 +130,22 @@ class StateStreamRecorder:
 
             # Read cameras (non-blocking)
             images: dict = {}
+            extra: dict = {}
             if self._get_cameras is not None:
                 raw = self._get_cameras.read_latest()
                 for name, data in raw.items():
                     if "rgb" in data:
                         images[name] = data["rgb"].copy()
+                    if "depth" in data:
+                        extra[f"observation.depths.{name}"] = data["depth"].copy()
                 if images:
                     self._last_images = images
+                if extra:
+                    self._last_extra = extra
 
             if obs is not None:
                 try:
-                    self._queue.put_nowait((obs, action, images))
+                    self._queue.put_nowait((obs, action, images, extra))
                 except queue.Full:
                     pass
 

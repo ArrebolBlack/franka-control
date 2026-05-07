@@ -43,7 +43,7 @@ If a gripper is enabled, one gripper dimension is appended.
 ```python
 from pathlib import Path
 import numpy as np
-from franka_control.data import CollectionConfig, DataCollector
+from franka_control.data import CameraConfig, CollectionConfig, DataCollector
 
 config = CollectionConfig(
     repo_id="user/example",
@@ -53,6 +53,7 @@ config = CollectionConfig(
     gripper_host="192.168.0.100",
     control_mode="ee_delta",
     fps=60,
+    cameras=[CameraConfig(name="d435", serial="...", depth=True)],
     use_videos=False,
     streaming_encoding=False,
 )
@@ -104,6 +105,10 @@ cameras.close()
 `read()` may block until a frame is available. `read_latest()` is non-blocking and
 returns the most recent cached frame for each camera.
 
+If depth is enabled for a RealSense camera, each camera frame may also contain a
+`depth` array. The collection helpers store these maps as raw `uint16`
+`observation.depths.<camera>` features.
+
 ## FK/IK
 
 ```python
@@ -138,4 +143,3 @@ python -m franka_control.scripts.run_trajectory \
     --route pick_place \
     --dry-run
 ```
-

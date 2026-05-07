@@ -8,7 +8,7 @@ success annotations, and optional camera streams into LeRobot v3 format.
 | Component | Responsibility |
 |---|---|
 | `FrankaEnv` | Executes actions and returns observations |
-| `CameraManager` | Reads RealSense RGB frames |
+| `CameraManager` | Reads RealSense RGB and optional depth frames |
 | `StateStreamRecorder` | Background robot state and camera recorder |
 | `DataCollector` | Writes LeRobot frames and episodes |
 | `collect_episodes.py` | End-user teleoperation collection script |
@@ -26,6 +26,7 @@ Default features:
 | `observation.effort` | `(7,)` | Joint torque |
 | `action` | `(8,)` or `(7,)` | Control command after clipping |
 | `observation.images.<camera>` | `(H,W,3)` | RGB frame |
+| `observation.depths.<camera>` | `(H,W)` | Optional raw `uint16` depth map |
 | `task` | string | Natural language instruction |
 
 Action shape:
@@ -70,8 +71,10 @@ d405:
   enable_depth: false
 ```
 
-Both `enable_depth` and `depth` are accepted by `CameraManager`. The standard
-collector currently records RGB images.
+Both `enable_depth` and `depth` are accepted by `CameraManager`. Cameras with
+depth enabled are registered as `CameraConfig(depth=True)` by the collection
+script and record raw `uint16` depth maps under `observation.depths.<camera>`.
+Depth maps are stored as numeric array features, not RGB images or videos.
 
 ## Collect Episodes
 

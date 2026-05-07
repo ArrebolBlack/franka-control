@@ -359,6 +359,7 @@ def main():
                 width=cam._resolution[0],
                 height=cam._resolution[1],
                 fps=cam._fps,
+                depth=getattr(cam, "_depth_enabled", False),
             )
             for name, cam in cameras._cameras.items()
         ]
@@ -570,9 +571,13 @@ def main():
 
                 # Drain accumulated (obs, images) from background thread
                 drained = recorder.drain()
-                for frame_obs, _, frame_images in drained:
+                for frame_obs, _, frame_images, frame_extra in drained:
                     images_to_use = frame_images if frame_images else last_images
-                    collector.record_frame(frame_obs, applied_action, images_to_use)
+                    extra_to_use = frame_extra if frame_extra else recorder.last_extra
+                    collector.record_frame(
+                        frame_obs, applied_action, images_to_use,
+                        extra=extra_to_use or None,
+                    )
                     if images_to_use:
                         last_images = images_to_use
                     record_count += 1
@@ -581,7 +586,10 @@ def main():
                 # If no frames accumulated, record one from step result
                 if not drained:
                     images_to_use = recorder.last_images or last_images
-                    collector.record_frame(obs_after, applied_action, images_to_use)
+                    collector.record_frame(
+                        obs_after, applied_action, images_to_use,
+                        extra=recorder.last_extra or None,
+                    )
                     if images_to_use:
                         last_images = images_to_use
                     record_count += 1
@@ -643,9 +651,13 @@ def _end_recording(recorder, collector, last_applied_action, last_images,
     recorder.stop()
     extra = 0
     if last_applied_action is not None:
-        for frame_obs, _, frame_images in recorder.drain():
+        for frame_obs, _, frame_images, frame_extra in recorder.drain():
             images_to_use = frame_images if frame_images else last_images
-            collector.record_frame(frame_obs, last_applied_action, images_to_use)
+            extra_to_use = frame_extra if frame_extra else recorder.last_extra
+            collector.record_frame(
+                frame_obs, last_applied_action, images_to_use,
+                extra=extra_to_use or None,
+            )
             extra += 1
     total = record_count + extra
     duration = time.perf_counter() - record_start_time

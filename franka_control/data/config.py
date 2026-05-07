@@ -13,6 +13,7 @@ class CameraConfig:
     width: int = 640
     height: int = 480
     fps: int = 60
+    depth: bool = False
 
 
 @dataclass

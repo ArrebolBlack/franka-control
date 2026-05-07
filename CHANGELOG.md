@@ -5,6 +5,22 @@ All notable user-facing changes will be documented in this file.
 The format follows the spirit of Keep a Changelog, and this project uses
 semantic versioning.
 
+## [0.2.0] - 2026-05-08
+
+### Added
+
+- Added optional RealSense depth recording for LeRobot datasets. Cameras with
+  `CameraConfig.depth=True` now register `observation.depths.<camera>` as raw
+  `uint16` `(H,W)` features.
+- Added depth capture to `StateStreamRecorder`; depth frames returned by
+  `CameraManager` are packaged into each frame's `extra` fields.
+
+### Changed
+
+- `StateStreamRecorder.drain()` now returns `(obs, action, images, extra)`
+  tuples instead of `(obs, action, images)` so callers can pass depth maps and
+  other registered non-RGB features through `DataCollector.record_frame()`.
+
 ## [0.1.0] - 2026-04-30
 
 ### Added

@@ -14,7 +14,7 @@ It provides a lightweight dual-machine stack with fast ZMQ state streaming, a Gy
 environment, SpaceMouse/keyboard teleoperation, waypoint and TOPPRA trajectory tools,
 Pinocchio FK/IK, RealSense camera integration, and LeRobot v3 dataset collection.
 
-> `v0.1.0` released. Hardware control always requires careful validation on
+> `v0.2.0` released. Hardware control always requires careful validation on
 > your robot and network setup.
 
 ## Why This Project
@@ -110,7 +110,7 @@ state PULL   ◀──── ZMQ stream :5557 ─────────── 
 GripperClient ──── ZMQ command :5556 ─────────▶ GripperServer ─▶ pylibfranka
 
 CameraManager ─── RealSense RGB frames
-StateStreamRecorder ─ robot state + latest camera frames
+StateStreamRecorder ─ robot state + latest RGB/depth camera frames
 DataCollector ─── LeRobotDataset v3
 ```
 
@@ -292,6 +292,7 @@ The collector writes LeRobot v3 datasets. Default features:
 | `observation.effort` | `(7,)` | Joint torques |
 | `action` | `(8,)` or `(7,)` | Depends on control mode |
 | `observation.images.<camera>` | `(H,W,3)` | RGB camera frame |
+| `observation.depths.<camera>` | `(H,W)` | Optional raw `uint16` depth map |
 | `task` | string | Natural language instruction |
 
 Success/failure annotations are stored in:
@@ -360,9 +361,9 @@ If this repository helps your research, please cite it using [`CITATION.cff`](CI
 @software{yu_franka_control_2026,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
   author = {Yin, Jiaqi},
-  version = {0.1.0},
+  version = {0.2.0},
   year = {2026},
-  date = {2026-04-30},
+  date = {2026-05-08},
   url = {https://github.com/ArrebolBlack/franka-control}
 }
 ```
