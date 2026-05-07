@@ -41,6 +41,14 @@ videos/
 /test_*.py
 !tests/test_*.py
 
+# Local agent scratch docs (root level only)
+/CLAUDE*.md
+/acceptance*.md
+/goal*.md
+/plan*.md
+/progress*.md
+/todo*.md
+
 # Algorithm docs (work in progress)
 docs/com_estimation_algorithm.md
 docs/solve_com.py
