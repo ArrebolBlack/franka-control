@@ -359,7 +359,7 @@ If this repository helps your research, please cite it using [`CITATION.cff`](CI
 ```bibtex
 @software{yu_franka_control_2026,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
-  author = {Yu, Yiqi},
+  author = {Yin, Jiaqi},
   version = {0.1.0},
   year = {2026},
   date = {2026-04-30},
