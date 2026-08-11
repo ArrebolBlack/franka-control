@@ -1,3 +1,5 @@
+
+
 <p align="center">
   <img src="docs/assets/logo.png" alt="Franka Control logo" width="420">
 </p>
@@ -360,7 +362,7 @@ If this repository helps your research, please cite it using [`CITATION.cff`](CI
 ```bibtex
 @software{yu_franka_control_2026,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
-  author = {Yin, Jiaqi},
+  author = {Yiqi Yu},
   version = {0.2.0},
   year = {2026},
   date = {2026-05-08},
