@@ -11,7 +11,7 @@ torch
 torchvision
 
 # Data collection (requires Python >=3.12)
-lerobot>=0.5.0
+lerobot[dataset]>=0.5.0
 
 # Teleoperation
 pyspacemouse

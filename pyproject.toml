@@ -39,7 +39,7 @@ dependencies = [
     "msgpack",
     "torch",
     "torchvision",
-    "lerobot>=0.5.0",
+    "lerobot[dataset]>=0.5.0",
     "pyrealsense2",
     "opencv-python",
     "matplotlib",
