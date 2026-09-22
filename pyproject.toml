@@ -9,7 +9,7 @@ description = "Franka Research 3 robot control library"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Yiqi Yu" },
+    { name = "Jiaqi Yin" },
 ]
 requires-python = ">=3.12"
 keywords = [

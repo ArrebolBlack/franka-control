@@ -358,7 +358,7 @@ More API examples: [`docs/api.md`](docs/api.md).
 If this repository helps your research, please cite it using [`CITATION.cff`](CITATION.cff).
 
 ```bibtex
-@software{yu_franka_control_2026,
+@software{yin_franka_control_2026,
   title = {Franka Control: No-ROS Python Control and Data Collection for Franka Research 3},
   author = {Yin, Jiaqi},
   version = {0.2.0},

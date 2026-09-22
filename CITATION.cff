@@ -3,8 +3,8 @@ message: "If you use Franka Control in your research, please cite this software.
 title: "Franka Control: No-ROS Python Control and Data Collection for Franka Research 3"
 type: software
 authors:
-  - family-names: "Yu"
-    given-names: "Yiqi"
+  - family-names: "Yin"
+    given-names: "Jiaqi"
 repository-code: "https://github.com/ArrebolBlack/franka-control"
 url: "https://github.com/ArrebolBlack/franka-control"
 license: "Apache-2.0"
