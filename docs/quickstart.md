@@ -269,7 +269,7 @@ python -m franka_control.scripts.collect_episodes \
 Expected output:
 
 - The script enters preview mode.
-- Press `s` to start recording.
+- Press `k` to start recording; press `h` to return to the home position.
 - Press `Esc` to end the episode.
 - Press `Y` or `N` when asked for success/failure.
 - The dataset is written under `data/state_only`.

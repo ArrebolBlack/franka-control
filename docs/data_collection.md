@@ -147,8 +147,9 @@ SpaceMouse mode:
 | SpaceMouse | 6-DoF motion |
 | Left button | close gripper |
 | Right button | open gripper |
-| `s` | start recording |
+| `k` | start recording |
 | `e` | end episode and ask success/failure |
+| `h` | return to home position (discards an active recording) |
 | `f` | discard / skip |
 | `q` | quit |
 
@@ -161,8 +162,9 @@ Keyboard mode:
 | `Space` | close gripper |
 | `Enter` | open gripper |
 | `Shift` | slow mode |
-| `s` | start recording |
+| `k` | start recording |
 | `Esc` | end episode |
+| `h` | return to home position (discards an active recording) |
 
 ## Notes
 

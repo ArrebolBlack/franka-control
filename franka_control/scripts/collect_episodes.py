@@ -36,9 +36,13 @@ from franka_control.data import CameraConfig, CollectionConfig, DataCollector, S
 from franka_control.envs import FrankaEnv
 from franka_control.teleop import KeyboardTeleop, SpaceMouseTeleop
 
+# force=True: the lerobot import chain installs a bare root handler before
+# this line runs, which would otherwise make this basicConfig a no-op and
+# silently swallow every INFO message (root stays at WARNING).
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    force=True,
 )
 logger = logging.getLogger(__name__)
 
@@ -49,7 +53,8 @@ def _keyboard_help() -> str:
         "  Q/E: +/-Yaw, Z/X: +/-Pitch, C/V: +/-Roll\n"
         "  Space: close gripper, Enter: open gripper\n"
         "  Shift: slow mode (0.25x)\n"
-        "  S: start recording, Esc: end episode"
+        "  K: start recording, Esc: end episode\n"
+        "  H: return to home position (discards an active recording)"
     )
 
 
@@ -57,7 +62,7 @@ def _spacemouse_help() -> str:
     return (
         "  SpaceMouse: 6-DOF movement\n"
         "  Left button: close gripper, Right button: open gripper\n"
-        "  Keyboard: s=start, e=end, f=discard, q=quit"
+        "  Keyboard: k=start, e=end, h=home, f=discard, q=quit"
     )
 
 
@@ -457,6 +462,7 @@ def main():
 
             env.reset()
             recording = False
+            h_prev = False  # edge-detection state for the H (home) key
             record_start_time = 0.0
             record_count = 0
             sec_frames = 0
@@ -482,6 +488,29 @@ def main():
                     if args.device == "spacemouse"
                     else None
                 )
+
+                # 'h': return to the home/reset position from anywhere.
+                # A running recording is discarded first so the homing motion
+                # never enters the dataset.
+                pressed_keys = info.get("pressed_keys", [])
+                if args.device == "spacemouse":
+                    h_requested = command_key == "h"
+                else:
+                    h_now = "h" in pressed_keys
+                    h_requested = h_now and not h_prev
+                    h_prev = h_now
+                if h_requested:
+                    if recording:
+                        recorder.stop()
+                        collector.discard_episode()
+                        recording = False
+                        logger.info("H: active episode discarded.")
+                    logger.info("H: moving to home position ...")
+                    env.move_to(env.home_qpos)
+                    if hasattr(teleop, "clear_pressed_keys"):
+                        teleop.clear_pressed_keys()
+                    h_prev = True
+                    continue
 
                 if args.device == "spacemouse" and command_key:
                     if command_key in ("q", "\x03"):
@@ -517,11 +546,14 @@ def main():
                     break
 
                 if not recording:
+                    # 'k' starts recording, not 's': in keyboard mode 's' is
+                    # also "move -X", so pressing it to start would jerk the
+                    # arm backwards at the same moment.
                     if args.device == "spacemouse":
-                        start_requested = command_key == "s"
+                        start_requested = command_key == "k"
                     else:
                         pressed = info.get("pressed_keys", [])
-                        start_requested = "s" in pressed
+                        start_requested = "k" in pressed
 
                     if start_requested:
                         recording = True
@@ -546,9 +578,9 @@ def main():
                     env.step(raw_action)
                     _read_cameras(cameras, config, last_images)
                     if args.device == "spacemouse":
-                        overlay = "PREVIEW - Press S=start E=end F=discard Q=quit"
+                        overlay = "PREVIEW - K=start E=end H=home F=discard Q=quit"
                     else:
-                        overlay = "PREVIEW - Press S to start"
+                        overlay = "PREVIEW - Press K=start H=home"
                     display.show(last_images, overlay)
                     elapsed = time.perf_counter() - loop_start
                     if elapsed < dt:
@@ -599,9 +631,9 @@ def main():
                 window_elapsed = time.perf_counter() - sec_t0
                 current_fps = sec_frames / max(window_elapsed, 1e-3)
                 if args.device == "spacemouse":
-                    rec_overlay = "REC - E=end F=discard Q=quit"
+                    rec_overlay = "REC - E=end H=home F=discard Q=quit"
                 else:
-                    rec_overlay = "REC - Esc=end"
+                    rec_overlay = "REC - Esc=end H=home"
                 display.show(
                     recorder.last_images or last_images,
                     rec_overlay,
