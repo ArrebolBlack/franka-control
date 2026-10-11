@@ -140,14 +140,19 @@ class GripperServer:
 
     # ── Lifecycle ────────────────────────────────────────────────
 
-    def start(self) -> None:
-        """Connect to gripper, start ZMQ socket and state polling."""
+    def _create_gripper(self):
+        """Create the gripper handle. Overridden by the mock server."""
         if pylibfranka is None:
             raise RuntimeError("pylibfranka is not installed")
 
         logger.info("Connecting to gripper at %s ...", self.robot_ip)
-        self._gripper = pylibfranka.Gripper(self.robot_ip)
+        gripper = pylibfranka.Gripper(self.robot_ip)
         logger.info("Gripper connected.")
+        return gripper
+
+    def start(self) -> None:
+        """Connect to gripper, start ZMQ socket and state polling."""
+        self._gripper = self._create_gripper()
 
         # ZMQ ROUTER socket
         self._ctx = zmq.Context()

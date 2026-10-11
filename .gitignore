@@ -28,6 +28,7 @@ Thumbs.db
 
 # Config with potential secrets
 config/waypoints.yaml
+config/cloud_tunnel.env
 
 # Data (collected datasets, not source code)
 data/
@@ -52,3 +53,6 @@ videos/
 # Algorithm docs (work in progress)
 docs/com_estimation_algorithm.md
 docs/solve_com.py
+
+# MuJoCo engine warning dumps (mock stack runs)
+MJDATA.TXT

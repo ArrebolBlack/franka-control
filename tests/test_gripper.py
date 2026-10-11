@@ -64,7 +64,7 @@ class MockGripper:
     def stop(self):
         return True
 
-    def readOnce(self):
+    def read_once(self):
         return MockGripperState(
             width=self._width,
             max_width=self._max_width,
