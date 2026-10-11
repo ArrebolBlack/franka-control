@@ -508,14 +508,23 @@ class RobotServer:
             return self._do_is_running(params)
         return {"success": False, "error": f"Unknown controller call: {name}"}
 
+    def _make_controller(self) -> FrankaRemoteController:
+        """Create the robot controller. Overridden by the mock server."""
+        return FrankaRemoteController(self._fci_ip, home=False)
+
     def _do_connect(self, params: dict) -> dict:
         if FrankaRemoteController is None:
             raise RuntimeError("aiofranka is not installed")
 
+        # A second connect without disconnect would otherwise leak the
+        # previous controller (subprocess + FCI session).
+        if self._controller is not None:
+            self._destroy_controller()
+
         self._clean_ipc_sockets()
         self._recover_errors()
 
-        ctrl = FrankaRemoteController(self._fci_ip, home=False)
+        ctrl = self._make_controller()
         try:
             ctrl.start()
             controller_type = params.get("controller_type", DEFAULT_CONTROLLER_TYPE)

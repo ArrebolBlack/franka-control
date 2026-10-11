@@ -205,8 +205,9 @@ class GripperClient:
     # ── Cleanup ──────────────────────────────────────────────────
 
     def close(self) -> None:
-        """Close ZMQ connection."""
+        """Close ZMQ connection. LINGER=0 so a dead server cannot hang term()."""
         if self._socket:
+            self._socket.setsockopt(zmq.LINGER, 0)
             self._socket.close()
         if self._ctx:
             self._ctx.term()

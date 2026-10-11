@@ -315,17 +315,25 @@ class RobotClient:
     # ── Cleanup ──────────────────────────────────────────────────
 
     def close(self) -> None:
-        """Disconnect from server and close ZMQ connection."""
+        """Disconnect from server and close ZMQ connection.
+
+        LINGER=0 before each close: with ZMQ's default infinite linger,
+        messages still queued for a server that never answered keep the
+        context alive and ``ctx.term()`` would block forever (observed when
+        closing after a failed connect to a server that is not running).
+        """
         self._stream_running = False
         if self._state_thread.is_alive():
             self._state_thread.join(timeout=2.0)
         if self._pull_socket:
+            self._pull_socket.setsockopt(zmq.LINGER, 0)
             self._pull_socket.close()
         if self._socket:
             try:
                 self.disconnect()
             except Exception:
                 pass
+            self._socket.setsockopt(zmq.LINGER, 0)
             self._socket.close()
         if self._ctx:
             self._ctx.term()
